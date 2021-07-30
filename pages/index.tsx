@@ -369,6 +369,8 @@ export default function Home() {
           {mode.type === "EDIT" ? (
             <textarea
               ref={editRef}
+              autoCorrect="off"
+              autoComplete="off"
               className="resize-none outline-none font-mono text-sm mx-auto"
               autoFocus
               cols={75}
