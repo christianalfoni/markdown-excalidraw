@@ -166,7 +166,7 @@ const options: MarkdownToJSX.Options = {
     ul({ children }) {
       return <ul className="list-disc ml-8">{children}</ul>;
     },
-    code: ({ className, children }) => {
+    code({ className, children }) {
       const language = className.replace("lang-", "");
 
       return (
@@ -194,7 +194,7 @@ const options: MarkdownToJSX.Options = {
           elements: excalidraw.elements,
           appState: excalidraw.state,
         });
-        return <img src={canvas.toDataURL()} />;
+        return <Image src={canvas.toDataURL()} />;
       }
 
       return null;
