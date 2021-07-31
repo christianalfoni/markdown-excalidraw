@@ -6,24 +6,24 @@ export const useKeyboardShortcuts = ([context, send]: Feature) => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Tab") {
         event.preventDefault();
-        if (context.mode.type === "EDIT") {
+        if (context.mode.state === "EDITING") {
           send({
             type: "CHANGE_MODE",
-            mode: { type: "READ" },
+            mode: { state: "READING" },
           });
-        } else if (context.mode.type === "READ") {
+        } else if (context.mode.state === "READING") {
           send({
             type: "CHANGE_MODE",
-            mode: { type: "EDIT" },
+            mode: { state: "EDITING" },
           });
         }
       }
 
       if (event.metaKey && event.key === "e") {
-        if (context.mode.type === "EXCALIDRAW") {
+        if (context.mode.state === "DRAWING") {
           send({
             type: "CHANGE_MODE",
-            mode: { type: "EDIT" },
+            mode: { state: "EDITING" },
           });
         } else {
           send({
