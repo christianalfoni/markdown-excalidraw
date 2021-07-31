@@ -242,10 +242,9 @@ const EditPage = ({
       ref={editRef}
       autoCorrect="off"
       autoComplete="off"
-      className="resize-none outline-none font-mono text-sm mx-auto"
+      className="py-6 h-full resize-none outline-none font-mono text-md mx-auto bg-transparent"
       autoFocus
       cols={75}
-      rows={30}
       value={value}
       onKeyDown={updateCaretPosition}
       onFocus={updateCaretPosition}
@@ -301,23 +300,33 @@ const ProjectWrapper = ({
   pages: Page[];
   pageIndex: number;
 }) => (
-  <div className="bg-gray-100 min-h-screen w-screen overflow-x-hidden">
-    <TOC pages={pages} pageIndex={pageIndex} />
+  <div className="min-h-screen w-screen overflow-hidden">
     <div
       className={classNames(
-        "absolute top-0 z-10 bg-white min-h-screen w-screen py-4 flex font-serif font-normal text-gray-800 mx-auto transition-all ease-in-out duration-300",
+        "p-4 absolute top-0 min-h-screen transition-all ease-in-out duration-500",
         match(toc, {
-          VISIBLE: () => "left-72 rounded-l-lg",
+          VISIBLE: () => "left-0",
+          HIDDEN: () => "-left-72",
+        })
+      )}
+    >
+      <TOC pages={pages} pageIndex={pageIndex} />
+    </div>
+    <div
+      className={classNames(
+        "absolute top-0 min-h-screen w-screen flex font-serif font-normal text-gray-50 mx-auto transition-all ease-in-out duration-300",
+        match(toc, {
+          VISIBLE: () => "left-72",
           HIDDEN: () => "left-0",
         })
       )}
     >
       <MenuAlt2Icon
         onClick={onToggleToc}
-        className="w-6 h-6 text-gray-500 absolute top-4 left-4"
+        className="w-6 h-6 text-gray-10 0 absolute top-4 left-4"
       />
-      <DatabaseIcon className="w-6 h-6 text-gray-500 absolute top-4 right-4" />
-      <div className="mx-auto py-4 flex">{children}</div>
+      <DatabaseIcon className="w-6 h-6 text-gray-100 absolute top-4 right-4" />
+      <div className="mx-auto flex">{children}</div>
     </div>
   </div>
 );
@@ -418,7 +427,10 @@ const App = () => {
               });
             }}
           >
-            <div style={{ width: "55ch" }}>
+            <div
+              style={{ width: "55ch" }}
+              className="bg-white rounded-md py-4 px-6 my-6"
+            >
               <ExcalidrawsProvider excalidraws={excalidraws}>
                 <Markdown options={options}>{currentPage.content}</Markdown>
               </ExcalidrawsProvider>
@@ -435,13 +447,19 @@ const Environment = process.browser
   : dynamic(() => import("../environments/next"));
 
 export default function Home() {
+  const children = (
+    <ProjectFeature repoUrl="https://github.com/christianalfoni/test-book">
+      <App />
+    </ProjectFeature>
+  );
+
   return (
     <Environment>
-      <DevtoolsProvider>
-        <ProjectFeature repoUrl="https://github.com/christianalfoni/test-book">
-          <App />
-        </ProjectFeature>
-      </DevtoolsProvider>
+      {process.env.NODE_ENV === "production" ? (
+        children
+      ) : (
+        <DevtoolsProvider>{children}</DevtoolsProvider>
+      )}
     </Environment>
   );
 }
