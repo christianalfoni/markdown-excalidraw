@@ -6,4 +6,5 @@ export const createProject = (): Project => ({
   load() {},
   updatePage() {},
   updateExcalidraw() {},
+  addPage() {},
 });

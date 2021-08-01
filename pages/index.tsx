@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   DatabaseIcon,
+  DocumentAddIcon,
   DocumentIcon,
   MenuAlt2Icon,
 } from "@heroicons/react/outline";
@@ -28,7 +29,7 @@ import {
 } from "../features/project";
 import { DevtoolsProvider } from "react-states/devtools";
 import { match } from "react-states";
-import debounce from "lodash.debounce";
+import { useRouter } from "next/router";
 import { Excalidraw } from "../environments/project";
 
 const Editor = dynamic(() => import("../common/Editor"), { ssr: false });
@@ -242,12 +243,12 @@ const EditPage = ({
 
   return (
     <div
-      className="py-6 h-full outline-none font-mono text-md mx-auto bg-transparent overflow-hidden"
+      className="py-6 h-full outline-none font-mono text-md flex mx-auto items-center  bg-transparent overflow-hidden"
       style={{ width: "800px" }}
     >
       <Editor
         value={value}
-        height={500}
+        height={700}
         caret={caretPosition}
         onChange={update}
         onCaretChange={updateCaretPosition}
@@ -256,7 +257,15 @@ const EditPage = ({
   );
 };
 
-const TOC = ({ pages, pageIndex }: { pages: Page[]; pageIndex: number }) => {
+const TOC = ({
+  pages,
+  pageIndex,
+  onAddPage,
+}: {
+  pages: Page[];
+  pageIndex: number;
+  onAddPage: () => void;
+}) => {
   return (
     <>
       {pages.map((page, index) => {
@@ -264,23 +273,37 @@ const TOC = ({ pages, pageIndex }: { pages: Page[]; pageIndex: number }) => {
         const header = page.toc.find((el) => el.level === 1);
 
         return (
-          <Link href={String(index)} key={index}>
-            <a
-              className={classNames(
-                isCurrent
-                  ? "text-gray-400"
-                  : "text-gray-200 hover:text-gray-300",
-                "group flex items-center px-2 py-2 text-base font-medium rounded-r-md"
-              )}
-              aria-current={isCurrent ? "page" : undefined}
-            >
-              <DocumentIcon
-                className="mr-2 flex-shrink-0 h-6 w-6"
-                aria-hidden="true"
-              />
-              {header ? header.name : `Page ${index + 1}`}
-            </a>
-          </Link>
+          <React.Fragment key={index}>
+            <Link href={`/?page=${index}`}>
+              <a
+                className={classNames(
+                  isCurrent
+                    ? "text-gray-400"
+                    : "text-gray-200 hover:text-gray-300",
+                  "group flex items-center px-2 py-2 text-base font-medium rounded-r-md"
+                )}
+                aria-current={isCurrent ? "page" : undefined}
+              >
+                <DocumentIcon
+                  className="mr-2 flex-shrink-0 h-6 w-6"
+                  aria-hidden="true"
+                />
+                {header ? header.name : `Page ${index + 1}`}
+              </a>
+            </Link>
+            {isCurrent ? (
+              <button
+                onClick={onAddPage}
+                className="text-gray-200 hover:text-gray-300 group flex items-center px-2 py-2 text-base font-medium rounded-r-md"
+              >
+                <DocumentAddIcon
+                  className="mr-2 flex-shrink-0 h-6 w-6"
+                  aria-hidden="true"
+                />
+                Add page
+              </button>
+            ) : null}
+          </React.Fragment>
         );
       })}
     </>
@@ -293,10 +316,12 @@ const ProjectWrapper = ({
   onToggleToc,
   pages,
   pageIndex,
+  onAddPage,
 }: {
   children: React.ReactNode;
   toc: TocContext;
   onToggleToc: () => void;
+  onAddPage: () => void;
   pages: Page[];
   pageIndex: number;
 }) => (
@@ -310,7 +335,7 @@ const ProjectWrapper = ({
         })
       )}
     >
-      <TOC pages={pages} pageIndex={pageIndex} />
+      <TOC pages={pages} pageIndex={pageIndex} onAddPage={onAddPage} />
     </div>
     <div
       className={classNames(
@@ -326,7 +351,7 @@ const ProjectWrapper = ({
         className="w-6 h-6 text-gray-10 0 absolute top-4 left-4"
       />
       <DatabaseIcon className="w-6 h-6 text-gray-100 absolute top-4 right-4" />
-      <div className="mx-auto flex">{children}</div>
+      <div className="mx-auto flex items-center">{children}</div>
     </div>
   </div>
 );
@@ -348,6 +373,7 @@ const App = () => {
     ),
     READY: ({ excalidraws, pages, pageIndex }) => {
       const currentPage = pages[pageIndex];
+      const nextPage = pages[pageIndex + 1];
 
       return match(project.mode, {
         DRAWING: ({ id }) => (
@@ -388,8 +414,14 @@ const App = () => {
                 type: "TOGGLE_TOC",
               });
             }}
+            onAddPage={() => {
+              send({
+                type: "ADD_PAGE",
+              });
+            }}
           >
             <EditPage
+              key={pageIndex}
               initialContent={currentPage.content}
               caretPosition={project.caretPosition}
               updateCaretPosition={(position) => {
@@ -417,15 +449,28 @@ const App = () => {
                 type: "TOGGLE_TOC",
               });
             }}
+            onAddPage={() => {
+              send({
+                type: "ADD_PAGE",
+              });
+            }}
           >
-            <div
-              style={{ width: "55ch" }}
-              className="bg-white rounded-md py-4 px-6 my-6"
-            >
-              <ExcalidrawsProvider excalidraws={excalidraws}>
+            <ExcalidrawsProvider excalidraws={excalidraws}>
+              <div
+                style={{ width: "55ch", height: "700px" }}
+                className="bg-white rounded-md py-4 px-6 my-6"
+              >
                 <Markdown options={options}>{currentPage.content}</Markdown>
-              </ExcalidrawsProvider>
-            </div>
+              </div>
+              {nextPage ? (
+                <div
+                  style={{ width: "55ch", height: "700px" }}
+                  className="bg-white rounded-md py-4 px-6 my-6"
+                >
+                  <Markdown options={options}>{nextPage.content}</Markdown>
+                </div>
+              ) : null}
+            </ExcalidrawsProvider>
           </ProjectWrapper>
         ),
       });
@@ -438,8 +483,12 @@ const Environment = process.browser
   : dynamic(() => import("../environments/next"));
 
 export default function Home() {
+  const router = useRouter();
   const children = (
-    <ProjectFeature repoUrl="https://github.com/christianalfoni/test-book">
+    <ProjectFeature
+      repoUrl="https://github.com/christianalfoni/test-book"
+      page={router.query.page ? Number(router.query.page) : 0}
+    >
       <App />
     </ProjectFeature>
   );

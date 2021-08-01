@@ -41,4 +41,5 @@ export type Project = {
   load: (repoUrl: string) => void;
   updatePage(repoUrl: string, pageIndex: number, content: string): void;
   updateExcalidraw(repoUrl: string, id: string, excalidraw: Excalidraw): void;
+  addPage(repoUrl: string, index: number): void;
 };

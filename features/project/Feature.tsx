@@ -1,4 +1,4 @@
-import { useReducer } from "react";
+import { useEffect, useReducer } from "react";
 import {
   createContext,
   createHook,
@@ -31,6 +31,10 @@ const reducer = createReducer<FeatureContext, FeatureEvent>(
       }),
     },
     READY: {
+      "PROJECT:PAGES_UPDATE": ({ pages }, context) => ({
+        ...context,
+        pages,
+      }),
       UPDATE_PAGE: ({ content }, { pageIndex }): TransientContext => ({
         state: "UPDATING_PAGE",
         content,
@@ -91,6 +95,18 @@ const reducer = createReducer<FeatureContext, FeatureEvent>(
 
         return context;
       },
+      ADD_PAGE: (_, { pageIndex }) => ({
+        state: "ADDING_PAGE",
+        pageIndex,
+      }),
+      CHANGE_PAGE: ({ index }, context) => ({
+        ...context,
+        pageIndex: index,
+        caretPosition: {
+          line: 0,
+          char: 0,
+        },
+      }),
     },
   },
   {
@@ -111,11 +127,12 @@ export const useFeature = createHook(featureContext);
 export const FeatureProvider = ({
   children,
   repoUrl,
+  page,
   initialContext = {
     state: "LOADING_PROJECT",
     pages: [],
     excalidraws: {},
-    pageIndex: 0,
+    pageIndex: page,
     mode: { state: "EDITING" },
     toc: { state: "HIDDEN" },
     caretPosition: {
@@ -125,6 +142,7 @@ export const FeatureProvider = ({
   },
 }: {
   children: React.ReactNode;
+  page: number;
   repoUrl: string;
   initialContext?: Context;
 }) => {
@@ -140,6 +158,13 @@ export const FeatureProvider = ({
   useEvents(project.events, send);
 
   useKeyboardShortcuts(feature);
+
+  useEffect(() => {
+    send({
+      type: "CHANGE_PAGE",
+      index: Number(page),
+    });
+  }, [page]);
 
   useEnterEffect(context, "LOADING_PROJECT", () => {
     project.load(repoUrl);
@@ -160,6 +185,10 @@ export const FeatureProvider = ({
       project.updatePage(repoUrl, pageIndex, content);
     }
   );
+
+  useTransientEffect(context, "ADDING_PAGE", ({ pageIndex }) => {
+    project.addPage(repoUrl, pageIndex + 1);
+  });
 
   return (
     <featureContext.Provider value={feature}>

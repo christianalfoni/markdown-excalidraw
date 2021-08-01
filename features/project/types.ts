@@ -66,6 +66,10 @@ export type TransientContext =
       state: "UPDATING_EXCALIDRAW";
       id: string;
       excalidraw: Excalidraw;
+    }
+  | {
+      state: "ADDING_PAGE";
+      pageIndex: number;
     };
 
 export type PublicEvent =
@@ -88,11 +92,19 @@ export type PublicEvent =
     }
   | {
       type: "TOGGLE_TOC";
+    }
+  | {
+      type: "ADD_PAGE";
     };
 
-export type PrivateEvent = {
-  type: "INSERT_EXCALIDRAW";
-};
+export type PrivateEvent =
+  | {
+      type: "INSERT_EXCALIDRAW";
+    }
+  | {
+      type: "CHANGE_PAGE";
+      index: number;
+    };
 
 export type FeatureContext = WithTransientContext<TransientContext, Context>;
 

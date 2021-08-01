@@ -152,5 +152,25 @@ export const createProject = (): Project => {
         );
       });
     },
+    addPage(repoUrl, index) {
+      pages = [
+        ...pages.slice(0, index),
+        { content: "", toc: [] },
+        ...pages.slice(index + 1),
+      ];
+
+      this.events.emit({
+        type: "PROJECT:PAGES_UPDATE",
+        pages,
+      });
+
+      imports.then(({ fs }) => {
+        const projectPath = getProjectPath(repoUrl);
+        fs.promises.writeFile(
+          path.join(projectPath, PAGES_DIR, `page_${index}.md`),
+          new TextEncoder().encode("")
+        );
+      });
+    },
   };
 };

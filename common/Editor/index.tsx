@@ -235,7 +235,7 @@ const reducer = createReducer<
         return context;
       },
       PREV_WORD: (_, { lines, char, line, lastPositioning }) => {
-        if (Date.now() - lastPositioning < 200) {
+        if (Date.now() - lastPositioning < 100) {
           return {
             state: "CHANGING_POSITION",
             lines,
@@ -265,7 +265,7 @@ const reducer = createReducer<
         };
       },
       NEXT_WORD: (_, { char, lines, line, lastPositioning }) => {
-        if (Date.now() - lastPositioning < 200) {
+        if (Date.now() - lastPositioning < 100) {
           return {
             state: "CHANGING_POSITION",
             lines,
@@ -294,7 +294,7 @@ const reducer = createReducer<
         };
       },
       NEXT_PARAGRAPH: (_, { line, lines, lastPositioning }) => {
-        if (Date.now() - lastPositioning < 200) {
+        if (Date.now() - lastPositioning < 100) {
           return {
             state: "CHANGING_POSITION",
             lines,
@@ -326,7 +326,7 @@ const reducer = createReducer<
         };
       },
       PREV_PARAGRAPH: (_, { lines, line, lastPositioning }) => {
-        if (Date.now() - lastPositioning < 200) {
+        if (Date.now() - lastPositioning < 100) {
           return {
             state: "CHANGING_POSITION",
             lines,
