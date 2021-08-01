@@ -5,6 +5,7 @@ import {
   createReducer,
   useEnterEffect,
   useEvents,
+  useTransientEffect,
 } from "react-states";
 import { useDevtools } from "react-states/devtools";
 import { useEnvironment } from "../../environments";
@@ -56,9 +57,9 @@ const reducer = createReducer<FeatureContext, FeatureEvent>(
       }),
       INSERT_EXCALIDRAW: (_, context) => {
         const { pages, pageIndex, caretPosition } = context;
-        const content = pages[pageIndex].content;
-        const firstLines = content.substr(0, caretPosition).split("\n");
-        const lastLines = content.substr(caretPosition).split("\n").slice(1);
+        const content = pages[pageIndex].content.split("\n");
+        const firstLines = content.slice(0, caretPosition.line + 1);
+        const lastLines = content.slice(caretPosition.line);
         const line = firstLines.pop() || "";
 
         if (line.length === 0) {
@@ -67,7 +68,10 @@ const reducer = createReducer<FeatureContext, FeatureEvent>(
 
           return {
             state: "INSERTING_EXCALIDRAW",
-            caretPosition: caretPosition + inserted.length,
+            caretPosition: {
+              line: caretPosition.line,
+              char: caretPosition.char + inserted.length,
+            },
             content: [...firstLines, inserted, ...lastLines].join("\n"),
             id,
             pageIndex,
@@ -114,7 +118,10 @@ export const FeatureProvider = ({
     pageIndex: 0,
     mode: { state: "EDITING" },
     toc: { state: "HIDDEN" },
-    caretPosition: 0,
+    caretPosition: {
+      line: 0,
+      char: 0,
+    },
   },
 }: {
   children: React.ReactNode;
@@ -138,17 +145,21 @@ export const FeatureProvider = ({
     project.load(repoUrl);
   });
 
-  useEnterEffect(context, "UPDATING_PAGE", ({ pageIndex, content }) => {
+  useTransientEffect(context, "UPDATING_PAGE", ({ pageIndex, content }) => {
     project.updatePage(repoUrl, pageIndex, content);
   });
 
-  useEnterEffect(context, "UPDATING_EXCALIDRAW", ({ id, excalidraw }) => {
+  useTransientEffect(context, "UPDATING_EXCALIDRAW", ({ id, excalidraw }) => {
     project.updateExcalidraw(repoUrl, id, excalidraw);
   });
 
-  useEnterEffect(context, "INSERTING_EXCALIDRAW", ({ content, pageIndex }) => {
-    project.updatePage(repoUrl, pageIndex, content);
-  });
+  useTransientEffect(
+    context,
+    "INSERTING_EXCALIDRAW",
+    ({ content, pageIndex }) => {
+      project.updatePage(repoUrl, pageIndex, content);
+    }
+  );
 
   return (
     <featureContext.Provider value={feature}>

@@ -30,6 +30,10 @@ export type ProjectEvent =
   | {
       type: "PROJECT:LOAD_ERROR";
       error: string;
+    }
+  | {
+      type: "PROJECT:PAGES_UPDATE";
+      pages: Page[];
     };
 
 export type Project = {

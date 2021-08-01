@@ -23,6 +23,11 @@ export type TocContext =
       state: "HIDDEN";
     };
 
+export type CaretPosition = {
+  line: number;
+  char: number;
+};
+
 type BaseContext = {
   pageIndex: number;
   pages: Page[];
@@ -31,7 +36,7 @@ type BaseContext = {
   };
   mode: ModeContext;
   toc: TocContext;
-  caretPosition: number;
+  caretPosition: CaretPosition;
 };
 
 export type Context = BaseContext &
@@ -52,7 +57,7 @@ export type TransientContext =
     }
   | {
       state: "INSERTING_EXCALIDRAW";
-      caretPosition: number;
+      caretPosition: CaretPosition;
       content: string;
       id: string;
       pageIndex: number;
@@ -74,7 +79,7 @@ export type PublicEvent =
     }
   | {
       type: "CHANGE_CARET_POSITION";
-      position: number;
+      position: CaretPosition;
     }
   | {
       type: "UPDATE_EXCALIDRAW";

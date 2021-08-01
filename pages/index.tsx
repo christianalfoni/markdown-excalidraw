@@ -24,11 +24,14 @@ import {
   useProject,
   Page,
   TocContext,
+  CaretPosition,
 } from "../features/project";
 import { DevtoolsProvider } from "react-states/devtools";
 import { match } from "react-states";
 import debounce from "lodash.debounce";
 import { Excalidraw } from "../environments/project";
+
+const Editor = dynamic(() => import("../common/Editor"), { ssr: false });
 
 const codeStyle = {
   hljs: {
@@ -220,13 +223,13 @@ const options: MarkdownToJSX.Options = {
 };
 
 const EditPage = ({
-  editRef,
   initialContent,
+  caretPosition,
   updateCaretPosition,
   onChange,
 }: {
-  updateCaretPosition: () => void;
-  editRef: React.Ref<HTMLTextAreaElement>;
+  caretPosition: CaretPosition;
+  updateCaretPosition: (position: CaretPosition) => void;
   initialContent: string;
   onChange: (content: string) => void;
 }) => {
@@ -236,6 +239,21 @@ const EditPage = ({
     setValue(content);
     onChange(content);
   }
+
+  return (
+    <div
+      className="py-6 h-full outline-none font-mono text-md mx-auto bg-transparent overflow-hidden"
+      style={{ width: "800px" }}
+    >
+      <Editor
+        value={value}
+        height={500}
+        caret={caretPosition}
+        onChange={update}
+        onCaretChange={updateCaretPosition}
+      />
+    </div>
+  );
 
   return (
     <textarea
@@ -334,20 +352,11 @@ const ProjectWrapper = ({
 const App = () => {
   const [project, send] = useProject();
   const [Comp, setComp] = useState<typeof ExcalidrawComponent | null>(null);
-  const editRef = useRef<HTMLTextAreaElement>(null);
   const excalidrawRef = useRef<ExcalidrawAPIRefValue>(null);
 
   useEffect(() => {
     import("@excalidraw/excalidraw").then((comp) => setComp(comp.default));
   }, []);
-
-  useEffect(() => {
-    if (project.mode.state === "EDITING" && editRef.current) {
-      editRef.current.focus();
-      editRef.current.selectionStart = project.caretPosition;
-      editRef.current.selectionEnd = project.caretPosition;
-    }
-  }, [project.mode]);
 
   return match(project, {
     LOADING_PROJECT: () => (
@@ -399,12 +408,12 @@ const App = () => {
             }}
           >
             <EditPage
-              editRef={editRef}
               initialContent={currentPage.content}
-              updateCaretPosition={() => {
+              caretPosition={project.caretPosition}
+              updateCaretPosition={(position) => {
                 send({
                   type: "CHANGE_CARET_POSITION",
-                  position: editRef.current?.selectionStart ?? 0,
+                  position,
                 });
               }}
               onChange={(content) => {
