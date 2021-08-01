@@ -254,24 +254,6 @@ const EditPage = ({
       />
     </div>
   );
-
-  return (
-    <textarea
-      ref={editRef}
-      autoCorrect="off"
-      autoComplete="off"
-      className="py-6 h-full resize-none outline-none font-mono text-md mx-auto bg-transparent"
-      autoFocus
-      cols={75}
-      value={value}
-      onKeyDown={updateCaretPosition}
-      onFocus={updateCaretPosition}
-      onClick={updateCaretPosition}
-      onChange={(event) => {
-        update(event.target.value);
-      }}
-    ></textarea>
-  );
 };
 
 const TOC = ({ pages, pageIndex }: { pages: Page[]; pageIndex: number }) => {
