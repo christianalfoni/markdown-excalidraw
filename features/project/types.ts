@@ -1,5 +1,10 @@
 import { States, WithTransientContext } from "react-states";
-import { Excalidraw, Page, ProjectEvent } from "../../environments/project";
+import {
+  Excalidraw,
+  GitChange,
+  Page,
+  ProjectEvent,
+} from "../../environments/project";
 
 export type { Excalidraw, Page };
 
@@ -15,12 +20,15 @@ export type ModeContext =
       id: string;
     };
 
-export type TocContext =
+export type MenuContext =
   | {
-      state: "VISIBLE";
+      state: "IDLE";
     }
   | {
-      state: "HIDDEN";
+      state: "TOC";
+    }
+  | {
+      state: "GIT";
     };
 
 export type CaretPosition = {
@@ -35,7 +43,7 @@ type BaseContext = {
     [id: string]: Excalidraw;
   };
   mode: ModeContext;
-  toc: TocContext;
+  menu: MenuContext;
   caretPosition: CaretPosition;
 };
 
@@ -46,6 +54,8 @@ export type Context = BaseContext &
       }
     | {
         state: "READY";
+        commitSha: string;
+        changes: GitChange[];
       }
   );
 
@@ -92,6 +102,9 @@ export type PublicEvent =
     }
   | {
       type: "TOGGLE_TOC";
+    }
+  | {
+      type: "TOGGLE_GIT";
     }
   | {
       type: "ADD_PAGE";

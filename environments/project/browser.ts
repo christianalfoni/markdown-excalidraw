@@ -1,11 +1,24 @@
 import { events } from "react-states";
-import { Excalidraw, Page, Project, ProjectEvent } from ".";
+import { Excalidraw, GitStatus, Page, Project, ProjectEvent } from ".";
 import MarkdownContents from "markdown-contents";
 
 import * as path from "path";
 
 const PAGES_DIR = "pages";
 const EXCALIDRAWS_DIR = "excalidraws";
+const statusToString: {
+  [key: string]: GitStatus;
+} = {
+  "020": "ADD_UNSTAGED",
+  "022": "ADD_STAGED",
+  "023": "ADD_PARTIALLY_STAGED",
+  "111": "UNMODIFIED",
+  "121": "MODIFIED_UNSTAGED",
+  "122": "MODIFIED_STAGED",
+  "123": "MODIFIED_PARTIALLY_STAGED",
+  "101": "DELETED_UNSTAGED",
+  "100": "DELETED_STAGED",
+};
 
 export const createProject = (): Project => {
   const projectEvents = events<ProjectEvent>();
@@ -94,9 +107,15 @@ export const createProject = (): Project => {
                     }))
                 )
               ),
+              git.resolveRef({ fs, dir: projectPath, ref: "main" }),
+              git.statusMatrix({
+                fs,
+                dir: projectPath,
+                filter: (f) => f.endsWith(".json") || f.endsWith(".md"),
+              }),
             ])
           )
-          .then(([pagesData, excalidrawsData]) => {
+          .then(([pagesData, excalidrawsData, commitSha, status]) => {
             pages = pagesData.length ? pagesData : [{ content: "", toc: [] }];
             excalidraws = excalidrawsData.reduce<{ [id: string]: Excalidraw }>(
               (aggr, data) => {
@@ -112,10 +131,20 @@ export const createProject = (): Project => {
               },
               {}
             );
+
+            const changes = status
+              .map(([path, head, workdir, stage]) => ({
+                path,
+                status: statusToString[`${head}${workdir}${stage}`],
+              }))
+              .filter((change) => change.status !== "UNMODIFIED");
+
             this.events.emit({
               type: "PROJECT:LOAD_SUCCESS",
               pages,
               excalidraws,
+              commitSha,
+              changes,
             });
           })
           .catch((error) => {

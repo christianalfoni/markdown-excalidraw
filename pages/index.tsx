@@ -25,13 +25,13 @@ import {
   ProjectFeature,
   useProject,
   Page,
-  TocContext,
+  MenuContext,
   CaretPosition,
 } from "../features/project";
 import { DevtoolsProvider } from "react-states/devtools";
 import { match } from "react-states";
 import { useRouter } from "next/router";
-import { Excalidraw } from "../environments/project";
+import { Excalidraw, GitChange, GitStatus } from "../environments/project";
 import { SnippetsFeature, useSnippets } from "../features/snippets";
 import { usePageState } from "../common/usePageState";
 
@@ -288,6 +288,37 @@ const EditPage = ({
   );
 };
 
+const renderGitStatusLabel = (status: GitStatus) => {
+  switch (status) {
+    case "ADD_UNSTAGED":
+    case "ADD_PARTIALLY_STAGED":
+    case "ADD_STAGED": {
+      return (
+        <span className="p-1 rounded bg-green-500 text-green-50 text-xs mr-1">
+          add
+        </span>
+      );
+    }
+    case "MODIFIED_UNSTAGED":
+    case "MODIFIED_STAGED":
+    case "MODIFIED_PARTIALLY_STAGED": {
+      return (
+        <span className="p-1 rounded bg-yellow-500 text-yellow-50 text-xs mr-1">
+          modify
+        </span>
+      );
+    }
+    case "DELETED_UNSTAGED":
+    case "DELETED_STAGED": {
+      return (
+        <span className="p-1 rounded bg-red-500 text-red-50 text-xs mr-1">
+          delete
+        </span>
+      );
+    }
+  }
+};
+
 const TOC = ({
   pages,
   pageIndex,
@@ -343,26 +374,31 @@ const TOC = ({
 
 const ProjectWrapper = ({
   children,
-  toc,
+  menu,
   onToggleToc,
+  onToggleGit,
   pages,
   pageIndex,
   onAddPage,
+  changes,
 }: {
   children: React.ReactNode;
-  toc: TocContext;
+  menu: MenuContext;
   onToggleToc: () => void;
+  onToggleGit: () => void;
   onAddPage: () => void;
   pages: Page[];
   pageIndex: number;
+  changes: GitChange[];
 }) => (
   <div className="min-h-screen w-screen overflow-hidden">
     <div
       className={classNames(
-        "p-4 absolute top-0 min-h-screen transition-all ease-in-out duration-500",
-        match(toc, {
-          VISIBLE: () => "left-0",
-          HIDDEN: () => "-left-72",
+        "p-4 absolute top-0 min-h-screen transition-all ease-in-out",
+        match(menu, {
+          TOC: () => "left-0 duration-500",
+          IDLE: () => "-left-72 duration-300",
+          GIT: () => "-left-72 duration-300",
         })
       )}
     >
@@ -371,9 +407,10 @@ const ProjectWrapper = ({
     <div
       className={classNames(
         "absolute top-0 min-h-screen w-screen flex font-serif font-normal text-gray-600 mx-auto transition-all ease-in-out duration-300",
-        match(toc, {
-          VISIBLE: () => "left-72",
-          HIDDEN: () => "left-0",
+        match(menu, {
+          TOC: () => "left-72",
+          IDLE: () => "left-0",
+          GIT: () => "-left-72",
         })
       )}
     >
@@ -381,8 +418,33 @@ const ProjectWrapper = ({
         onClick={onToggleToc}
         className="w-6 h-6 text-gray-100 0 absolute top-4 left-4"
       />
-      <DatabaseIcon className="w-6 h-6 text-gray-100 absolute top-4 right-4" />
+      <DatabaseIcon
+        onClick={onToggleGit}
+        className="w-6 h-6 text-gray-100 absolute top-4 right-4"
+      />
       <div className="mx-auto flex items-center">{children}</div>
+    </div>
+    <div
+      className={classNames(
+        "p-4 absolute top-0 min-h-screen transition-all ease-in-out w-72",
+        match(menu, {
+          TOC: () => "-right-72 duration-300",
+          IDLE: () => "-right-72 duration-300",
+          GIT: () => "right-0 duration-500",
+        })
+      )}
+    >
+      <ul>
+        {changes.map(({ path, status }) => (
+          <li key={path} className="text-gray-500 mb-2 flex items-center">
+            {renderGitStatusLabel(status)}
+            {path}
+          </li>
+        ))}
+      </ul>
+      <button className="text-gray-300 w-full p-2 bg-gray-800 rounded mt-2">
+        SAVE
+      </button>
     </div>
   </div>
 );
@@ -403,9 +465,8 @@ const App = () => {
         Loading...
       </div>
     ),
-    READY: ({ excalidraws, pages, pageIndex }) => {
+    READY: ({ excalidraws, pages, pageIndex, changes }) => {
       const currentPage = pages[pageIndex];
-      const nextPage = pages[pageIndex + 1];
 
       return match(project.mode, {
         DRAWING: ({ id }) => (
@@ -438,12 +499,18 @@ const App = () => {
         ),
         EDITING: () => (
           <ProjectWrapper
-            toc={project.toc}
+            menu={project.menu}
             pages={pages}
             pageIndex={pageIndex}
+            changes={changes}
             onToggleToc={() => {
               send({
                 type: "TOGGLE_TOC",
+              });
+            }}
+            onToggleGit={() => {
+              send({
+                type: "TOGGLE_GIT",
               });
             }}
             onAddPage={() => {
@@ -473,12 +540,18 @@ const App = () => {
         ),
         READING: () => (
           <ProjectWrapper
-            toc={project.toc}
+            menu={project.menu}
             pages={pages}
             pageIndex={pageIndex}
+            changes={changes}
             onToggleToc={() => {
               send({
                 type: "TOGGLE_TOC",
+              });
+            }}
+            onToggleGit={() => {
+              send({
+                type: "TOGGLE_GIT",
               });
             }}
             onAddPage={() => {
@@ -491,7 +564,7 @@ const App = () => {
               <div className="cover">
                 <div className="book">
                   <div
-                    className="book__page book__page--1 bg-gray-50 rounded-md py-4 px-6 my-6 border-gray-500 border"
+                    className="book__page book__page--1 bg-gray-50 rounded-md py-4 px-6 border-gray-500 border"
                     onClick={() => {
                       prev();
                     }}
@@ -501,7 +574,7 @@ const App = () => {
                     </Markdown>
                   </div>
 
-                  <div className="book__page book__page--4 bg-gray-50 rounded-md py-4 px-6 my-6 border-gray-500 border">
+                  <div className="book__page book__page--4 bg-gray-50 rounded-md py-4 px-6 border-gray-500 border">
                     <Markdown options={options}>
                       {pages[index + 3]?.content ?? ""}
                     </Markdown>
@@ -518,7 +591,7 @@ const App = () => {
                     }
                   >
                     <div
-                      className="book__page-front bg-gray-50 rounded-md py-4 px-6 my-6 border-gray-500 border"
+                      className="book__page-front bg-gray-50 rounded-md py-4 px-6 border-gray-500 border"
                       onClick={() => {
                         next();
                       }}
@@ -527,7 +600,7 @@ const App = () => {
                         {pages[index + 1]?.content ?? ""}
                       </Markdown>
                     </div>
-                    <div className="book__page-back bg-gray-50 rounded-md py-4 px-6 my-6 border-gray-500 border">
+                    <div className="book__page-back bg-gray-50 rounded-md py-4 px-6 border-gray-500 border">
                       <Markdown options={options}>
                         {pages[index + 2]?.content ?? ""}
                       </Markdown>

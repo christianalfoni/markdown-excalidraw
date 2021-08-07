@@ -23,11 +23,16 @@ const featureContext = createContext<FeatureContext, PublicEvent>();
 const reducer = createReducer<FeatureContext, FeatureEvent>(
   {
     LOADING_PROJECT: {
-      "PROJECT:LOAD_SUCCESS": ({ excalidraws, pages }, context): Context => ({
+      "PROJECT:LOAD_SUCCESS": (
+        { excalidraws, pages, commitSha, changes },
+        context
+      ): Context => ({
         ...context,
         state: "READY",
         excalidraws,
         pages,
+        commitSha,
+        changes,
       }),
     },
     READY: {
@@ -55,8 +60,14 @@ const reducer = createReducer<FeatureContext, FeatureEvent>(
       }),
       TOGGLE_TOC: (_, context) => ({
         ...context,
-        toc: {
-          state: context.toc.state === "VISIBLE" ? "HIDDEN" : "VISIBLE",
+        menu: {
+          state: context.menu.state === "TOC" ? "IDLE" : "TOC",
+        },
+      }),
+      TOGGLE_GIT: (_, context) => ({
+        ...context,
+        menu: {
+          state: context.menu.state === "GIT" ? "IDLE" : "GIT",
         },
       }),
       INSERT_EXCALIDRAW: (_, context) => {
@@ -134,7 +145,7 @@ export const FeatureProvider = ({
     excalidraws: {},
     pageIndex: page,
     mode: { state: "EDITING" },
-    toc: { state: "HIDDEN" },
+    menu: { state: "IDLE" },
     caretPosition: {
       line: 0,
       char: 0,

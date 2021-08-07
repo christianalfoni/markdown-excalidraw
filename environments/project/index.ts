@@ -19,6 +19,22 @@ export type Page = {
   toc: Toc[];
 };
 
+export type GitStatus =
+  | "ADD_UNSTAGED"
+  | "ADD_STAGED"
+  | "ADD_PARTIALLY_STAGED"
+  | "UNMODIFIED"
+  | "MODIFIED_UNSTAGED"
+  | "MODIFIED_STAGED"
+  | "MODIFIED_PARTIALLY_STAGED"
+  | "DELETED_UNSTAGED"
+  | "DELETED_STAGED";
+
+export type GitChange = {
+  path: string;
+  status: GitStatus;
+};
+
 export type ProjectEvent =
   | {
       type: "PROJECT:LOAD_SUCCESS";
@@ -26,6 +42,8 @@ export type ProjectEvent =
       excalidraws: {
         [id: string]: Excalidraw;
       };
+      commitSha: string;
+      changes: GitChange[];
     }
   | {
       type: "PROJECT:LOAD_ERROR";
