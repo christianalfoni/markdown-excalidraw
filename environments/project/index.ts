@@ -34,6 +34,16 @@ export type ProjectEvent =
   | {
       type: "PROJECT:PAGES_UPDATE";
       pages: Page[];
+    }
+  | {
+      type: "PROJECT:LOAD_SNIPPET_SUCCESS";
+      path: string;
+      code: string;
+    }
+  | {
+      type: "PROJECT:LOAD_SNIPPET_ERROR";
+      path: string;
+      error: string;
     };
 
 export type Project = {
@@ -42,4 +52,5 @@ export type Project = {
   updatePage(repoUrl: string, pageIndex: number, content: string): void;
   updateExcalidraw(repoUrl: string, id: string, excalidraw: Excalidraw): void;
   addPage(repoUrl: string, index: number): void;
+  loadSnippet(repoUrl: string, path: string): void;
 };

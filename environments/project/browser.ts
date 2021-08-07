@@ -29,6 +29,9 @@ export const createProject = (): Project => {
   let excalidraws: {
     [id: string]: Excalidraw;
   } = {};
+  let snippets: {
+    [path: string]: string;
+  } = {};
 
   return {
     events: projectEvents,
@@ -171,6 +174,29 @@ export const createProject = (): Project => {
           new TextEncoder().encode("")
         );
       });
+    },
+    loadSnippet(repoUrl, snippetPath) {
+      if (snippets[snippetPath]) {
+        this.events.emit({
+          type: "PROJECT:LOAD_SNIPPET_SUCCESS",
+          path: snippetPath,
+          code: snippets[snippetPath],
+        });
+      } else {
+        imports
+          .then(({ fs }) => {
+            const projectPath = getProjectPath(repoUrl);
+            return fs.promises.readFile(path.join(projectPath, snippetPath));
+          })
+          .then((content) => {
+            snippets[snippetPath] = new TextDecoder().decode(content);
+            this.events.emit({
+              type: "PROJECT:LOAD_SNIPPET_SUCCESS",
+              path: snippetPath,
+              code: snippets[snippetPath],
+            });
+          });
+      }
     },
   };
 };

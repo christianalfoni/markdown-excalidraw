@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import * as pathUtil from "path";
 import {
   DatabaseIcon,
   DocumentAddIcon,
@@ -31,6 +32,8 @@ import { DevtoolsProvider } from "react-states/devtools";
 import { match } from "react-states";
 import { useRouter } from "next/router";
 import { Excalidraw } from "../environments/project";
+import { SnippetsFeature, useSnippets } from "../features/snippets";
+import { usePageState } from "../common/usePageState";
 
 const Editor = dynamic(() => import("../common/Editor"), { ssr: false });
 
@@ -40,48 +43,47 @@ const codeStyle = {
     overflowX: "auto",
     marginTop: "1em",
     marginBottom: "1em",
-    padding: "1em",
-    color: "rgb(107, 114, 128)",
-    background: "rgb(31, 41, 55)",
-    borderRadius: "12px",
+    color: "#374151",
+    background: "transparent",
+    fontSize: "14px",
   },
   "hljs-comment": {
-    color: "#998",
+    color: "#9CA3AF",
     fontStyle: "italic",
   },
   "hljs-quote": {
-    color: "#998",
+    color: "#9CA3AF",
     fontStyle: "italic",
   },
   "hljs-keyword": {
-    color: "rgb(107, 114, 128)",
+    color: "#3B82F6",
     fontWeight: "bold",
   },
   "hljs-selector-tag": {
-    color: "rgb(107, 114, 128)",
+    color: "#EF4444",
     fontWeight: "bold",
   },
   "hljs-subst": {
-    color: "rgb(107, 114, 128)",
+    color: "#EF4444",
     fontWeight: "normal",
   },
   "hljs-number": {
-    color: "#008080",
+    color: "#3B82F6",
   },
   "hljs-literal": {
-    color: "#008080",
+    color: "#F59E0B",
   },
   "hljs-variable": {
-    color: "#008080",
+    color: "#374151",
   },
   "hljs-template-variable": {
-    color: "#008080",
+    color: "#374151",
   },
   "hljs-tag .hljs-attr": {
-    color: "#008080",
+    color: "#EF4444",
   },
   "hljs-string": {
-    color: "#d14",
+    color: "#F59E0B",
   },
   "hljs-doctag": {
     color: "#d14",
@@ -107,11 +109,11 @@ const codeStyle = {
     fontWeight: "bold",
   },
   "hljs-tag": {
-    color: "#000080",
+    color: "#EF4444",
     fontWeight: "normal",
   },
   "hljs-name": {
-    color: "#000080",
+    color: "#EF4444",
     fontWeight: "normal",
   },
   "hljs-attribute": {
@@ -182,9 +184,38 @@ const options: MarkdownToJSX.Options = {
     ul({ children }) {
       return <ul className="list-disc ml-8">{children}</ul>;
     },
-    code({ className, children }) {
-      const language = className.replace("lang-", "");
+    Snippet({ path, from, to }) {
+      const [context, send] = useSnippets();
+      const language = {
+        ".tsx": "typescript",
+      }[pathUtil.extname(path)];
+      const code = context.snippets[path]
+        ? context.snippets[path].split("\n").slice(from - 1, to)
+        : Array(to - from).fill("");
 
+      useEffect(() => {
+        send({
+          type: "LOAD_SNIPPET",
+          path,
+        });
+      }, []);
+
+      return (
+        <SyntaxHighlighter
+          language={language}
+          style={codeStyle}
+          showLineNumbers
+          startingLineNumber={Number(from)}
+          lineNumberStyle={{
+            width: "40px",
+            minWidth: "auto",
+          }}
+        >
+          {code.join("\n")}
+        </SyntaxHighlighter>
+      );
+    },
+    Code({ children, language }) {
       return (
         <SyntaxHighlighter language={language} style={codeStyle}>
           {children}
@@ -278,8 +309,8 @@ const TOC = ({
               <a
                 className={classNames(
                   isCurrent
-                    ? "text-gray-400"
-                    : "text-gray-200 hover:text-gray-300",
+                    ? "text-gray-200"
+                    : "text-gray-400 hover:text-gray-300",
                   "group flex items-center px-2 py-2 text-base font-medium rounded-r-md"
                 )}
                 aria-current={isCurrent ? "page" : undefined}
@@ -339,7 +370,7 @@ const ProjectWrapper = ({
     </div>
     <div
       className={classNames(
-        "absolute top-0 min-h-screen w-screen flex font-serif font-normal text-gray-50 mx-auto transition-all ease-in-out duration-300",
+        "absolute top-0 min-h-screen w-screen flex font-serif font-normal text-gray-600 mx-auto transition-all ease-in-out duration-300",
         match(toc, {
           VISIBLE: () => "left-72",
           HIDDEN: () => "left-0",
@@ -348,7 +379,7 @@ const ProjectWrapper = ({
     >
       <MenuAlt2Icon
         onClick={onToggleToc}
-        className="w-6 h-6 text-gray-10 0 absolute top-4 left-4"
+        className="w-6 h-6 text-gray-100 0 absolute top-4 left-4"
       />
       <DatabaseIcon className="w-6 h-6 text-gray-100 absolute top-4 right-4" />
       <div className="mx-auto flex items-center">{children}</div>
@@ -360,6 +391,7 @@ const App = () => {
   const [project, send] = useProject();
   const [Comp, setComp] = useState<typeof ExcalidrawComponent | null>(null);
   const excalidrawRef = useRef<ExcalidrawAPIRefValue>(null);
+  const { index, flip, next, prev } = usePageState();
 
   useEffect(() => {
     import("@excalidraw/excalidraw").then((comp) => setComp(comp.default));
@@ -456,20 +488,69 @@ const App = () => {
             }}
           >
             <ExcalidrawsProvider excalidraws={excalidraws}>
+              <div className="cover">
+                <div className="book">
+                  <div
+                    className="book__page book__page--1 bg-gray-50 rounded-md py-4 px-6 my-6 border-gray-500 border"
+                    onClick={() => {
+                      prev();
+                    }}
+                  >
+                    <Markdown options={options}>
+                      {pages[index]?.content ?? ""}
+                    </Markdown>
+                  </div>
+
+                  <div className="book__page book__page--4 bg-gray-50 rounded-md py-4 px-6 my-6 border-gray-500 border">
+                    <Markdown options={options}>
+                      {pages[index + 3]?.content ?? ""}
+                    </Markdown>
+                  </div>
+                  <div
+                    className={
+                      "book__page book__page--2" +
+                      {
+                        0: "",
+                        1: " transition-flip",
+                        2: " flip",
+                        3: " flip-2",
+                      }[flip]
+                    }
+                  >
+                    <div
+                      className="book__page-front bg-gray-50 rounded-md py-4 px-6 my-6 border-gray-500 border"
+                      onClick={() => {
+                        next();
+                      }}
+                    >
+                      <Markdown options={options}>
+                        {pages[index + 1]?.content ?? ""}
+                      </Markdown>
+                    </div>
+                    <div className="book__page-back bg-gray-50 rounded-md py-4 px-6 my-6 border-gray-500 border">
+                      <Markdown options={options}>
+                        {pages[index + 2]?.content ?? ""}
+                      </Markdown>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/*
               <div
                 style={{ width: "55ch", height: "700px" }}
-                className="bg-white rounded-md py-4 px-6 my-6"
+                className="bg-gray-50 rounded-md py-4 px-6 my-6 border-gray-500 border"
               >
-                <Markdown options={options}>{currentPage.content}</Markdown>
+                
               </div>
               {nextPage ? (
                 <div
                   style={{ width: "55ch", height: "700px" }}
-                  className="bg-white rounded-md py-4 px-6 my-6"
+                  className="bg-gray-50 rounded-md py-4 px-6 my-6 border-gray-500 border"
                 >
                   <Markdown options={options}>{nextPage.content}</Markdown>
                 </div>
               ) : null}
+              */}
             </ExcalidrawsProvider>
           </ProjectWrapper>
         ),
@@ -484,12 +565,15 @@ const Environment = process.browser
 
 export default function Home() {
   const router = useRouter();
+  const repoUrl = "https://github.com/christianalfoni/test-book";
   const children = (
     <ProjectFeature
-      repoUrl="https://github.com/christianalfoni/test-book"
+      repoUrl={repoUrl}
       page={router.query.page ? Number(router.query.page) : 0}
     >
-      <App />
+      <SnippetsFeature repoUrl={repoUrl}>
+        <App />
+      </SnippetsFeature>
     </ProjectFeature>
   );
 

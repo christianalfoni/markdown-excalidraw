@@ -235,7 +235,7 @@ const reducer = createReducer<
         return context;
       },
       PREV_WORD: (_, { lines, char, line, lastPositioning }) => {
-        if (Date.now() - lastPositioning < 100) {
+        if (Date.now() - lastPositioning < 150) {
           return {
             state: "CHANGING_POSITION",
             lines,
@@ -265,7 +265,7 @@ const reducer = createReducer<
         };
       },
       NEXT_WORD: (_, { char, lines, line, lastPositioning }) => {
-        if (Date.now() - lastPositioning < 100) {
+        if (Date.now() - lastPositioning < 150) {
           return {
             state: "CHANGING_POSITION",
             lines,
@@ -294,7 +294,7 @@ const reducer = createReducer<
         };
       },
       NEXT_PARAGRAPH: (_, { line, lines, lastPositioning }) => {
-        if (Date.now() - lastPositioning < 100) {
+        if (Date.now() - lastPositioning < 150) {
           return {
             state: "CHANGING_POSITION",
             lines,
@@ -326,7 +326,7 @@ const reducer = createReducer<
         };
       },
       PREV_PARAGRAPH: (_, { lines, line, lastPositioning }) => {
-        if (Date.now() - lastPositioning < 100) {
+        if (Date.now() - lastPositioning < 150) {
           return {
             state: "CHANGING_POSITION",
             lines,
@@ -444,38 +444,40 @@ export default function Editor({
 
   useEnterEffect(context, "IDLE", () => {
     const keydown = (event: KeyboardEvent) => {
-      if (event.key.length === 1 && !event.metaKey) {
+      const key = event.code === "Equal" ? "`" : event.key;
+
+      if (!event.metaKey && key.length === 1) {
         event.preventDefault();
         send({
           type: "CHAR_INSERT",
-          key: event.key,
+          key: key,
         });
-      } else if (event.key === "Backspace") {
+      } else if (key === "Backspace") {
         event.preventDefault();
         send({
           type: "CHAR_REMOVE",
         });
-      } else if (event.key === "Enter") {
+      } else if (key === "Enter") {
         event.preventDefault();
         send({
           type: "NEW_LINE",
         });
-      } else if (event.key === "ArrowUp") {
+      } else if (key === "ArrowUp") {
         event.preventDefault();
         send({
           type: event.metaKey ? "PREV_PARAGRAPH" : "PREV_LINE",
         });
-      } else if (event.key === "ArrowDown") {
+      } else if (key === "ArrowDown") {
         event.preventDefault();
         send({
           type: event.metaKey ? "NEXT_PARAGRAPH" : "NEXT_LINE",
         });
-      } else if (event.key === "ArrowLeft") {
+      } else if (key === "ArrowLeft") {
         event.preventDefault();
         send({
           type: event.metaKey ? "PREV_WORD" : "PREV_CHAR",
         });
-      } else if (event.key === "ArrowRight") {
+      } else if (key === "ArrowRight") {
         event.preventDefault();
         send({
           type: event.metaKey ? "NEXT_WORD" : "NEXT_CHAR",
