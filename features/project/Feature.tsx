@@ -1,139 +1,150 @@
-import { useEffect, useReducer } from "react";
+import { useContext, useEffect, useReducer } from "react";
 import {
   createContext,
-  createHook,
   createReducer,
   useEnterEffect,
   useEvents,
   useTransientEffect,
 } from "react-states";
 import { useDevtools } from "react-states/devtools";
+import { ProjectEvent } from "../../environments/project";
 import { useEnvironment } from "../../environments";
 import { useKeyboardShortcuts } from "./effects";
 import {
-  Context,
   FeatureContext,
+  PrivateEvent,
   FeatureEvent,
-  PublicEvent,
-  TransientContext,
+  Transition,
 } from "./types";
 
-const featureContext = createContext<FeatureContext, PublicEvent>();
+const featureContext = createContext<FeatureContext, FeatureEvent>();
 
-const reducer = createReducer<FeatureContext, FeatureEvent>(
-  {
-    LOADING_PROJECT: {
-      "PROJECT:LOAD_SUCCESS": (
-        { excalidraws, pages, commitSha, changes },
-        context
-      ): Context => ({
-        ...context,
-        state: "READY",
-        excalidraws,
-        pages,
-        commitSha,
-        changes,
-      }),
-    },
-    READY: {
-      "PROJECT:PAGES_UPDATE": ({ pages }, context) => ({
-        ...context,
-        pages,
-      }),
-      UPDATE_PAGE: ({ content }, { pageIndex }): TransientContext => ({
-        state: "UPDATING_PAGE",
+const reducer = createReducer<
+  FeatureContext,
+  FeatureEvent | PrivateEvent | ProjectEvent
+>({
+  LOADING_PROJECT: {
+    "PROJECT:LOAD_SUCCESS": (
+      { excalidraws, pages, commitSha, changes },
+      context
+    ): Transition => ({
+      ...context,
+      state: "READY",
+      excalidraws,
+      pages,
+      commitSha,
+      changes,
+    }),
+  },
+  READY: {
+    "PROJECT:PAGES_UPDATE": ({ pages }, context): Transition => ({
+      ...context,
+      pages,
+    }),
+    UPDATE_PAGE: ({ content }, context): Transition => [
+      {
+        state: "$UPDATING_PAGE",
         content,
-        pageIndex,
-      }),
-      CHANGE_MODE: ({ mode }, context): Context => ({
-        ...context,
-        mode,
-      }),
-      CHANGE_CARET_POSITION: ({ position }, context): Context => ({
-        ...context,
-        caretPosition: position,
-      }),
-      UPDATE_EXCALIDRAW: ({ excalidraw, id }): TransientContext => ({
-        state: "UPDATING_EXCALIDRAW",
+        pageIndex: context.pageIndex,
+      },
+      context,
+    ],
+    CHANGE_MODE: ({ mode }, context): Transition => ({
+      ...context,
+      mode,
+    }),
+    CHANGE_CARET_POSITION: ({ position }, context): Transition => ({
+      ...context,
+      caretPosition: position,
+    }),
+    UPDATE_EXCALIDRAW: ({ excalidraw, id }, context): Transition => [
+      {
+        state: "$UPDATING_EXCALIDRAW",
         id,
         excalidraw,
-      }),
-      TOGGLE_TOC: (_, context) => ({
-        ...context,
-        menu: {
-          state: context.menu.state === "TOC" ? "IDLE" : "TOC",
-        },
-      }),
-      TOGGLE_GIT: (_, context) => ({
-        ...context,
-        menu: {
-          state: context.menu.state === "GIT" ? "IDLE" : "GIT",
-        },
-      }),
-      INSERT_EXCALIDRAW: (_, context) => {
-        const { pages, pageIndex, caretPosition } = context;
-        const content = pages[pageIndex].content.split("\n");
-        const firstLines = content.slice(0, caretPosition.line + 1);
-        const lastLines = content.slice(caretPosition.line);
-        const line = firstLines.pop() || "";
+      },
+      context,
+    ],
+    TOGGLE_TOC: (_, context): Transition => ({
+      ...context,
+      menu: {
+        state: context.menu.state === "TOC" ? "IDLE" : "TOC",
+      },
+    }),
+    TOGGLE_GIT: (_, context): Transition => ({
+      ...context,
+      menu: {
+        state: context.menu.state === "GIT" ? "IDLE" : "GIT",
+      },
+    }),
+    "PROJECT:GIT_UPDATE": ({ changes }, context): Transition => ({
+      ...context,
+      changes,
+    }),
+    INSERT_EXCALIDRAW: (_, context): Transition => {
+      const { pages, pageIndex, caretPosition } = context;
+      const content = pages[pageIndex].content.split("\n");
+      const firstLines = content.slice(0, caretPosition.line + 1);
+      const lastLines = content.slice(caretPosition.line);
+      const line = firstLines.pop() || "";
 
-        if (line.length === 0) {
-          const id = String(Date.now());
-          const inserted = `<Excalidraw id="${id}" />`;
+      if (line.length === 0) {
+        const id = String(Date.now());
+        const inserted = `<Excalidraw id="${id}" />`;
 
-          return {
-            state: "INSERTING_EXCALIDRAW",
+        return [
+          {
+            state: "$INSERTING_EXCALIDRAW",
+            content: [...firstLines, inserted, ...lastLines].join("\n"),
+            id,
+            pageIndex,
+          },
+          {
+            ...context,
             caretPosition: {
               line: caretPosition.line,
               char: caretPosition.char + inserted.length,
             },
-            content: [...firstLines, inserted, ...lastLines].join("\n"),
-            id,
-            pageIndex,
-          };
-        }
-        const excalidrawRef = line.match(/<Excalidraw id="(.*)" \/>/);
-
-        if (excalidrawRef) {
-          return {
-            ...context,
             mode: {
-              state: "DRAWING",
-              id: excalidrawRef[1],
+              state: "DRAWING" as const,
+              id,
             },
-          };
-        }
+          },
+        ];
+      }
+      const excalidrawRef = line.match(/<Excalidraw id="(.*)" \/>/);
 
-        return context;
-      },
-      ADD_PAGE: (_, { pageIndex }) => ({
-        state: "ADDING_PAGE",
-        pageIndex,
-      }),
-      CHANGE_PAGE: ({ index }, context) => ({
-        ...context,
-        pageIndex: index,
-        caretPosition: {
-          line: 0,
-          char: 0,
-        },
-      }),
+      if (excalidrawRef) {
+        return {
+          ...context,
+          mode: {
+            state: "DRAWING" as const,
+            id: excalidrawRef[1],
+          },
+        };
+      }
+
+      return context;
     },
-  },
-  {
-    INSERTING_EXCALIDRAW: ({ id, caretPosition, content }, prevContext) => ({
-      ...prevContext,
-      mode: {
-        state: "DRAWING",
-        id,
+    ADD_PAGE: (_, context): Transition => [
+      {
+        state: "$ADDING_PAGE",
+        pageIndex: context.pageIndex,
       },
-      caretPosition,
-      content,
+      context,
+    ],
+    CHANGE_PAGE: ({ index }, context) => ({
+      ...context,
+      pageIndex: index,
+      caretPosition: {
+        line: 0,
+        char: 0,
+      },
     }),
-  }
-);
+  },
+});
 
-export const useFeature = createHook(featureContext);
+export const useFeature = () => useContext(featureContext);
 
 export const FeatureProvider = ({
   children,
@@ -144,7 +155,7 @@ export const FeatureProvider = ({
     pages: [],
     excalidraws: {},
     pageIndex: page,
-    mode: { state: "EDITING" },
+    mode: { state: "READING" },
     menu: { state: "IDLE" },
     caretPosition: {
       line: 0,
@@ -155,7 +166,7 @@ export const FeatureProvider = ({
   children: React.ReactNode;
   page: number;
   repoUrl: string;
-  initialContext?: Context;
+  initialContext?: FeatureContext;
 }) => {
   const { project } = useEnvironment();
   const feature = useReducer(reducer, initialContext);
@@ -181,23 +192,23 @@ export const FeatureProvider = ({
     project.load(repoUrl);
   });
 
-  useTransientEffect(context, "UPDATING_PAGE", ({ pageIndex, content }) => {
+  useTransientEffect(context, "$UPDATING_PAGE", ({ pageIndex, content }) => {
     project.updatePage(repoUrl, pageIndex, content);
   });
 
-  useTransientEffect(context, "UPDATING_EXCALIDRAW", ({ id, excalidraw }) => {
+  useTransientEffect(context, "$UPDATING_EXCALIDRAW", ({ id, excalidraw }) => {
     project.updateExcalidraw(repoUrl, id, excalidraw);
   });
 
   useTransientEffect(
     context,
-    "INSERTING_EXCALIDRAW",
+    "$INSERTING_EXCALIDRAW",
     ({ content, pageIndex }) => {
       project.updatePage(repoUrl, pageIndex, content);
     }
   );
 
-  useTransientEffect(context, "ADDING_PAGE", ({ pageIndex }) => {
+  useTransientEffect(context, "$ADDING_PAGE", ({ pageIndex }) => {
     project.addPage(repoUrl, pageIndex + 1);
   });
 

@@ -8,4 +8,5 @@ export const createProject = (): Project => ({
   updateExcalidraw() {},
   addPage() {},
   loadSnippet() {},
+  save() {},
 });

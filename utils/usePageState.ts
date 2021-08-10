@@ -45,7 +45,7 @@ export const usePageState = () => {
             flip: 2,
           };
         });
-      }, 900);
+      }, 500);
 
       return () => {
         clearTimeout(timeout);

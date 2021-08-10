@@ -1,7 +1,11 @@
-import { useEffect } from "react";
-import { Feature } from "./types";
+import { Dispatch, useEffect } from "react";
 
-export const useKeyboardShortcuts = ([context, send]: Feature) => {
+import { FeatureContext, FeatureEvent, PrivateEvent } from "./types";
+
+export const useKeyboardShortcuts = ([context, send]: [
+  FeatureContext,
+  Dispatch<FeatureEvent | PrivateEvent>
+]) => {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Tab") {

@@ -1,10 +1,5 @@
-import { States, WithTransientContext } from "react-states";
-import {
-  Excalidraw,
-  GitChange,
-  Page,
-  ProjectEvent,
-} from "../../environments/project";
+import { Context, ContextTransition } from "react-states";
+import { Excalidraw, GitChange, Page } from "../../environments/project";
 
 export type { Excalidraw, Page };
 
@@ -47,42 +42,44 @@ type BaseContext = {
   caretPosition: CaretPosition;
 };
 
-export type Context = BaseContext &
-  (
-    | {
-        state: "LOADING_PROJECT";
-      }
-    | {
-        state: "READY";
-        commitSha: string;
-        changes: GitChange[];
-      }
-  );
-
-export type TransientContext =
+export type FeatureContext = Context<
+  | (BaseContext &
+      (
+        | {
+            state: "LOADING_PROJECT";
+          }
+        | {
+            state: "READY";
+            commitSha: string;
+            changes: GitChange[];
+          }
+      ))
   | {
-      state: "UPDATING_PAGE";
+      state: "$UPDATING_PAGE";
       pageIndex: number;
       content: string;
     }
   | {
-      state: "INSERTING_EXCALIDRAW";
-      caretPosition: CaretPosition;
+      state: "$INSERTING_EXCALIDRAW";
       content: string;
       id: string;
       pageIndex: number;
     }
   | {
-      state: "UPDATING_EXCALIDRAW";
+      state: "$UPDATING_EXCALIDRAW";
       id: string;
       excalidraw: Excalidraw;
     }
   | {
-      state: "ADDING_PAGE";
+      state: "$ADDING_PAGE";
       pageIndex: number;
-    };
+    }
+  | {
+      state: "$SAVING";
+    }
+>;
 
-export type PublicEvent =
+export type FeatureEvent =
   | {
       type: "UPDATE_PAGE";
       content: string;
@@ -108,6 +105,9 @@ export type PublicEvent =
     }
   | {
       type: "ADD_PAGE";
+    }
+  | {
+      type: "SAVE";
     };
 
 export type PrivateEvent =
@@ -119,8 +119,4 @@ export type PrivateEvent =
       index: number;
     };
 
-export type FeatureContext = WithTransientContext<TransientContext, Context>;
-
-export type FeatureEvent = PrivateEvent | PublicEvent | ProjectEvent;
-
-export type Feature = States<FeatureContext, PrivateEvent | PublicEvent>;
+export type Transition = ContextTransition<FeatureContext>;

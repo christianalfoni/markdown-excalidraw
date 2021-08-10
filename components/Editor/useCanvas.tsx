@@ -28,14 +28,7 @@ export function useCanvas(
   const [context, setContext] = useState<CanvasRenderingContext2D>(
     null as unknown as CanvasRenderingContext2D
   );
-
-  useEffect(() => {
-    const ctx = canvasRef.current!.getContext("2d")!;
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    setContext(ctx);
-  }, []);
-
-  return [
+  const canvas = (
     <canvas
       ref={canvasRef}
       width={width * ratio}
@@ -44,7 +37,14 @@ export function useCanvas(
         width: width + "px",
         height: height + "px",
       }}
-    ></canvas>,
-    context,
-  ];
+    ></canvas>
+  );
+
+  useEffect(() => {
+    const ctx = canvasRef.current!.getContext("2d")!;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    setContext(ctx);
+  }, []);
+
+  return [canvas, context];
 }

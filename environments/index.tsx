@@ -1,8 +1,10 @@
 import { createContext, useContext } from "react";
+import { Auth } from "./auth";
 import { Project } from "./project";
 
 export interface Environment {
   project: Project;
+  auth: Auth;
 }
 
 const environmentContext = createContext<Environment>({} as Environment);

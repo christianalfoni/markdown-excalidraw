@@ -3,4 +3,12 @@ export {
   useFeature as useProject,
 } from "./Feature";
 
-export * from "./types";
+export type {
+  FeatureContext as ProjectContext,
+  FeatureEvent as ProjectEvent,
+  CaretPosition,
+  Page,
+  Excalidraw,
+  MenuContext,
+  ModeContext,
+} from "./types";

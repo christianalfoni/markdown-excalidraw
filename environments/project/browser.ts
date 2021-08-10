@@ -1,6 +1,7 @@
 import { events } from "react-states";
 import { Excalidraw, GitStatus, Page, Project, ProjectEvent } from ".";
 import MarkdownContents from "markdown-contents";
+import debounce from "lodash.debounce";
 
 import * as path from "path";
 
@@ -38,6 +39,36 @@ export const createProject = (): Project => {
     return repoUrl.replace("https://github.com", "");
   }
 
+  function getChanges(repoUrl: string) {
+    const projectPath = getProjectPath(repoUrl);
+
+    return imports.then(({ git, fs }) =>
+      git
+        .statusMatrix({
+          fs,
+          dir: projectPath,
+          filter: (f) => f.endsWith(".json") || f.endsWith(".md"),
+        })
+        .then((status) =>
+          status
+            .map(([path, head, workdir, stage]) => ({
+              path,
+              status: statusToString[`${head}${workdir}${stage}`],
+            }))
+            .filter((change) => change.status !== "UNMODIFIED")
+        )
+    );
+  }
+
+  const emitChangesDebounced = debounce((repoUrl: string) => {
+    getChanges(repoUrl).then((changes) => {
+      projectEvents.emit({
+        type: "PROJECT:GIT_UPDATE",
+        changes,
+      });
+    });
+  }, 500);
+
   let pages: Page[] = [];
   let excalidraws: {
     [id: string]: Excalidraw;
@@ -52,9 +83,8 @@ export const createProject = (): Project => {
       imports.then(({ git, fs, http }) => {
         const projectPath = getProjectPath(repoUrl);
 
-        return fs.promises
-          .lstat(projectPath)
-          .catch(() =>
+        function loadProject() {
+          return fs.promises.lstat(projectPath).catch(() =>
             git.clone({
               fs,
               http,
@@ -62,62 +92,63 @@ export const createProject = (): Project => {
               url: repoUrl,
               corsProxy: "https://cors.isomorphic-git.org",
             })
-          )
-          .then(() =>
-            Promise.all([
-              fs.promises
-                .readdir(path.join(projectPath, PAGES_DIR))
-                .catch(() =>
-                  fs.promises
-                    .mkdir(path.join(projectPath, PAGES_DIR))
-                    .then(() => [])
-                ),
-              fs.promises
-                .readdir(path.join(projectPath, EXCALIDRAWS_DIR))
-                .catch(() =>
-                  fs.promises
-                    .mkdir(path.join(projectPath, EXCALIDRAWS_DIR))
-                    .then(() => [])
-                ),
-            ])
-          )
-          .then(([pages, excalidraws]) =>
-            Promise.all([
-              Promise.all(
-                pages.map((name) =>
-                  fs.promises
-                    .readFile(path.join(projectPath, PAGES_DIR, name))
-                    .then((value): Page => {
-                      const content = new TextDecoder().decode(value);
+          );
+        }
 
-                      return {
-                        content,
-                        toc: MarkdownContents(content).tree(),
-                      };
-                    })
-                )
+        function readDirectories() {
+          return Promise.all([
+            fs.promises
+              .readdir(path.join(projectPath, PAGES_DIR))
+              .catch(() =>
+                fs.promises
+                  .mkdir(path.join(projectPath, PAGES_DIR))
+                  .then(() => [])
               ),
-              Promise.all(
-                excalidraws.map((name) =>
-                  fs.promises
-                    .readFile(path.join(projectPath, EXCALIDRAWS_DIR, name))
-                    .then((value): Excalidraw & { id: string } => ({
-                      ...JSON.parse(new TextDecoder().decode(value)),
-                      id: path.basename(name, ".json"),
-                    }))
-                )
+            fs.promises
+              .readdir(path.join(projectPath, EXCALIDRAWS_DIR))
+              .catch(() =>
+                fs.promises
+                  .mkdir(path.join(projectPath, EXCALIDRAWS_DIR))
+                  .then(() => [])
               ),
-              git.resolveRef({ fs, dir: projectPath, ref: "main" }),
-              git.statusMatrix({
-                fs,
-                dir: projectPath,
-                filter: (f) => f.endsWith(".json") || f.endsWith(".md"),
-              }),
-            ])
-          )
-          .then(([pagesData, excalidrawsData, commitSha, status]) => {
-            pages = pagesData.length ? pagesData : [{ content: "", toc: [] }];
-            excalidraws = excalidrawsData.reduce<{ [id: string]: Excalidraw }>(
+          ]);
+        }
+
+        function getCommitSha() {
+          return git.resolveRef({ fs, dir: projectPath, ref: "main" });
+        }
+
+        function getPages(pages: string[]) {
+          return Promise.all(
+            pages.map((name) =>
+              fs.promises
+                .readFile(path.join(projectPath, PAGES_DIR, name))
+                .then((value): Page => {
+                  const content = new TextDecoder().decode(value);
+
+                  return {
+                    content,
+                    toc: MarkdownContents(content).tree(),
+                  };
+                })
+            )
+          ).then((pagesData) =>
+            pagesData.length ? pagesData : [{ content: "", toc: [] }]
+          );
+        }
+
+        function getExcalidraws(excalidraws: string[]) {
+          return Promise.all(
+            excalidraws.map((name) =>
+              fs.promises
+                .readFile(path.join(projectPath, EXCALIDRAWS_DIR, name))
+                .then((value): Excalidraw & { id: string } => ({
+                  ...JSON.parse(new TextDecoder().decode(value)),
+                  id: path.basename(name, ".json"),
+                }))
+            )
+          ).then((excalidrawsData) =>
+            excalidrawsData.reduce<{ [id: string]: Excalidraw }>(
               (aggr, data) => {
                 aggr[data.id] = {
                   elements: data.elements,
@@ -130,14 +161,25 @@ export const createProject = (): Project => {
                 return aggr;
               },
               {}
-            );
+            )
+          );
+        }
 
-            const changes = status
-              .map(([path, head, workdir, stage]) => ({
-                path,
-                status: statusToString[`${head}${workdir}${stage}`],
-              }))
-              .filter((change) => change.status !== "UNMODIFIED");
+        function getProjectData(pages: string[], excalidraws: string[]) {
+          return Promise.all([
+            getPages(pages),
+            getExcalidraws(excalidraws),
+            getCommitSha(),
+            getChanges(repoUrl),
+          ]);
+        }
+
+        return loadProject()
+          .then(() => readDirectories())
+          .then(([pages, excalidraws]) => getProjectData(pages, excalidraws))
+          .then(([pagesData, excalidrawsData, commitSha, changes]) => {
+            pages = pagesData;
+            excalidraws = excalidrawsData;
 
             this.events.emit({
               type: "PROJECT:LOAD_SUCCESS",
@@ -162,13 +204,16 @@ export const createProject = (): Project => {
       pages[pageIndex].content = content;
       pages[pageIndex].toc = MarkdownContents(content).tree();
 
-      imports.then(({ fs }) => {
-        const projectPath = getProjectPath(repoUrl);
-        fs.promises.writeFile(
-          path.join(projectPath, PAGES_DIR, `page_${pageIndex}.md`),
-          new TextEncoder().encode(content)
-        );
-      });
+      imports
+        .then(({ fs }) => {
+          const projectPath = getProjectPath(repoUrl);
+
+          return fs.promises.writeFile(
+            path.join(projectPath, PAGES_DIR, `page_${pageIndex}.md`),
+            new TextEncoder().encode(content)
+          );
+        })
+        .then(() => emitChangesDebounced(repoUrl));
     },
     updateExcalidraw(repoUrl, id, excalidraw) {
       // We just mutate without firing an event, to avoid
@@ -176,13 +221,15 @@ export const createProject = (): Project => {
       // used in the Project feature
       excalidraws[id] = excalidraw;
 
-      imports.then(({ fs }) => {
-        const projectPath = getProjectPath(repoUrl);
-        fs.promises.writeFile(
-          path.join(projectPath, EXCALIDRAWS_DIR, `${id}.json`),
-          new TextEncoder().encode(JSON.stringify(excalidraw))
-        );
-      });
+      imports
+        .then(({ fs }) => {
+          const projectPath = getProjectPath(repoUrl);
+          return fs.promises.writeFile(
+            path.join(projectPath, EXCALIDRAWS_DIR, `${id}.json`),
+            new TextEncoder().encode(JSON.stringify(excalidraw))
+          );
+        })
+        .then(() => emitChangesDebounced(repoUrl));
     },
     addPage(repoUrl, index) {
       pages = [
@@ -226,6 +273,94 @@ export const createProject = (): Project => {
             });
           });
       }
+    },
+    save(repoUrl, accessToken) {
+      const projectPath = getProjectPath(repoUrl);
+
+      imports
+        .then(({ git, fs, http }) =>
+          getChanges(repoUrl)
+            .then((changes) =>
+              changes.reduce<{
+                added: string[];
+                modified: string[];
+                deleted: string[];
+              }>(
+                (aggr, change) => {
+                  if (
+                    change.status === "ADD_PARTIALLY_STAGED" ||
+                    change.status === "ADD_UNSTAGED"
+                  ) {
+                    aggr.added.push(change.path);
+                  } else if (
+                    change.status === "MODIFIED_PARTIALLY_STAGED" ||
+                    change.status === "MODIFIED_UNSTAGED"
+                  ) {
+                    aggr.modified.push(change.path);
+                  } else if (change.status === "DELETED_UNSTAGED") {
+                    aggr.deleted.push(change.path);
+                  }
+
+                  return aggr;
+                },
+                {
+                  added: [],
+                  modified: [],
+                  deleted: [],
+                }
+              )
+            )
+            .then((filesToStage) =>
+              Promise.all([
+                filesToStage.added.map((path) =>
+                  git.add({
+                    fs,
+                    dir: projectPath,
+                    filepath: path,
+                  })
+                ),
+                filesToStage.modified.map((path) =>
+                  git.add({
+                    fs,
+                    dir: projectPath,
+                    filepath: path,
+                  })
+                ),
+                filesToStage.deleted.map((path) =>
+                  git.remove({
+                    fs,
+                    dir: projectPath,
+                    filepath: path,
+                  })
+                ),
+              ])
+            )
+            .then(() =>
+              git.commit({
+                fs,
+                dir: projectPath,
+                author: {
+                  name: "Christian Alfoni",
+                  email: "christianalfoni@gmail.com",
+                },
+                message: "Save",
+              })
+            )
+            .then(() =>
+              git.push({
+                fs,
+                dir: projectPath,
+                http,
+                onAuth: () => ({ username: accessToken }),
+              })
+            )
+        )
+        .catch((error) => {
+          projectEvents.emit({
+            type: "PROJECT:SAVE_ERROR",
+            error: error.message,
+          });
+        });
     },
   };
 };

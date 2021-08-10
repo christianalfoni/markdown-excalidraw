@@ -1,56 +1,64 @@
-import { useReducer } from "react";
+import { createContext, Dispatch, useContext, useReducer } from "react";
 import {
-  createContext,
-  createHook,
-  createReducer,
+  Context,
+  ContextTransition,
+  transition,
+  useEnterEffect,
   useEvents,
   useTransientEffect,
-  WithTransientContext,
 } from "react-states";
 import { useDevtools } from "react-states/devtools";
 import { useEnvironment } from "../../environments";
 import { ProjectEvent } from "../../environments/project";
 
-type Context = {
-  state: "IDLE";
-  snippets: {
-    [path: string]: string;
-  };
-};
+type FeatureContext = Context<
+  | {
+      state: "IDLE";
+      snippets: {
+        [path: string]: string;
+      };
+    }
+  | {
+      state: "$LOADING_SNIPPET";
+      path: string;
+    }
+>;
 
-type TransientContext = {
-  state: "LOADING_SNIPPET";
-  path: string;
-};
-
-type FeatureContext = WithTransientContext<TransientContext, Context>;
-
-type PublicEvent = {
+type FeatureEvent = {
   type: "LOAD_SNIPPET";
   path: string;
 };
 
-type FeatureEvent = PublicEvent | ProjectEvent;
+type Transition = ContextTransition<FeatureContext>;
 
-const featureContext = createContext<FeatureContext, PublicEvent>();
+const featureContext = createContext<[FeatureContext, Dispatch<FeatureEvent>]>(
+  [] as any
+);
 
-const reducer = createReducer<FeatureContext, FeatureEvent>({
-  IDLE: {
-    "PROJECT:LOAD_SNIPPET_SUCCESS": ({ path, code }, context) => ({
-      ...context,
-      snippets: {
-        ...context.snippets,
-        [path]: code,
-      },
-    }),
-    LOAD_SNIPPET: ({ path }) => ({
-      state: "LOADING_SNIPPET",
-      path,
-    }),
-  },
-});
+const reducer = (context: FeatureContext, event: FeatureEvent | ProjectEvent) =>
+  transition(context, event, {
+    IDLE: {
+      "PROJECT:LOAD_SNIPPET_SUCCESS": (
+        { path, code },
+        context
+      ): Transition => ({
+        ...context,
+        snippets: {
+          ...context.snippets,
+          [path]: code,
+        },
+      }),
+      LOAD_SNIPPET: ({ path }, context): Transition => [
+        {
+          state: "$LOADING_SNIPPET",
+          path,
+        },
+        context,
+      ],
+    },
+  });
 
-export const useFeature = createHook(featureContext);
+export const useFeature = () => useContext(featureContext);
 
 export const FeatureProvider = ({
   children,
@@ -75,7 +83,7 @@ export const FeatureProvider = ({
 
   useEvents(project.events, send);
 
-  useTransientEffect(context, "LOADING_SNIPPET", ({ path }) => {
+  useTransientEffect(context, "$LOADING_SNIPPET", ({ path }) => {
     project.loadSnippet(repoUrl, path);
   });
 

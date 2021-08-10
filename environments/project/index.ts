@@ -62,6 +62,18 @@ export type ProjectEvent =
       type: "PROJECT:LOAD_SNIPPET_ERROR";
       path: string;
       error: string;
+    }
+  | {
+      type: "PROJECT:GIT_UPDATE";
+      changes: GitChange[];
+    }
+  | {
+      type: "PROJECT:SAVE_SUCCESS";
+      commitSha: string;
+    }
+  | {
+      type: "PROJECT:SAVE_ERROR";
+      error: string;
     };
 
 export type Project = {
@@ -71,4 +83,5 @@ export type Project = {
   updateExcalidraw(repoUrl: string, id: string, excalidraw: Excalidraw): void;
   addPage(repoUrl: string, index: number): void;
   loadSnippet(repoUrl: string, path: string): void;
+  save(repoUrl: string, accessToken: string): void;
 };
