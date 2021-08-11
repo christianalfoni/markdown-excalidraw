@@ -1,7 +1,7 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 
-import { CaretPosition } from "../features/project";
+import { CaretPosition } from "../features/writeBook";
 
 const Editor = dynamic(() => import("./Editor"), { ssr: false });
 

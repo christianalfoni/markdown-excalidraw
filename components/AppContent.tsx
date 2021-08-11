@@ -1,10 +1,10 @@
 import React from "react";
 import { match } from "react-states";
-import { useProject } from "../features/project";
+import { useWriteBook } from "../features/writeBook";
 import { classNames } from "../utils";
 
 export const AppContent = ({ children }: { children: React.ReactNode }) => {
-  const [project] = useProject();
+  const [project] = useWriteBook();
 
   return (
     <div

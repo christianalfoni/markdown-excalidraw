@@ -149,6 +149,7 @@ export const useFeature = () => useContext(featureContext);
 export const FeatureProvider = ({
   children,
   repoUrl,
+  accessToken,
   page,
   initialContext = {
     state: "LOADING_PROJECT",
@@ -166,6 +167,7 @@ export const FeatureProvider = ({
   children: React.ReactNode;
   page: number;
   repoUrl: string;
+  accessToken: string;
   initialContext?: FeatureContext;
 }) => {
   const { project } = useEnvironment();
@@ -210,6 +212,10 @@ export const FeatureProvider = ({
 
   useTransientEffect(context, "$ADDING_PAGE", ({ pageIndex }) => {
     project.addPage(repoUrl, pageIndex + 1);
+  });
+
+  useTransientEffect(context, "$SAVING", () => {
+    project.save(repoUrl, accessToken);
   });
 
   return (

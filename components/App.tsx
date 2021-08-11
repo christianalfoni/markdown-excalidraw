@@ -1,48 +1,44 @@
-import { BookOpenIcon } from "@heroicons/react/outline";
+import { useRouter } from "next/router";
 import React from "react";
 import { match } from "react-states";
-import { useProject } from "../features/project";
+import { WriteBookFeature } from "../features/writeBook";
 import { useSession } from "../features/session";
-import { AppContent } from "./AppContent";
+import { SnippetsFeature } from "../features/snippets";
 import { AppWrapper } from "./AppWrapper";
-import { Book } from "./Book";
-import { EditBook } from "./EditBook";
-import { GitChanges } from "./GitChanges";
-import { Navigation } from "./Navigation";
-import { Toc } from "./Toc";
+import { WriteBook } from "./WriteBook";
+import { Loading } from "./Loading";
+import { ReadBook } from "./ReadBook";
+import { ReadBookFeature } from "../features/readBook";
 
 export const App = () => {
-  const [project, send] = useProject();
   const [session] = useSession();
-
-  const loading = (
-    <div className="w-screen h-screen text-gray-100 flex items-center justify-center flex-col">
-      <BookOpenIcon className="w-10 h-10" />
-      <span>opening</span>
-    </div>
-  );
+  const router = useRouter();
+  const repoUrl = "https://github.com/christianalfoni/test-book";
+  const page = router.query.page ? Number(router.query.page) : 0;
 
   return (
     <AppWrapper>
-      {match(project, {
-        LOADING_PROJECT: () => loading,
-        READY: (readyContext) => (
-          <>
-            <Toc />
-            <AppContent>
-              <Navigation project={readyContext} send={send} />
-              <div className="mx-auto flex items-center">
-                {match(session, {
-                  AUTHENTICATING: () => loading,
-                  SIGNED_IN: () => <EditBook />,
-                  SIGNED_OUT: () => <Book />,
-                  SIGNING_IN: () => loading,
-                })}
-              </div>
-            </AppContent>
-            <GitChanges project={readyContext} send={send} />
-          </>
+      {match(session, {
+        AUTHENTICATING: () => <Loading />,
+        SIGNED_IN: ({ accessToken }) => (
+          <WriteBookFeature
+            repoUrl={repoUrl}
+            accessToken={accessToken}
+            page={page}
+          >
+            <SnippetsFeature repoUrl={repoUrl}>
+              <WriteBook />
+            </SnippetsFeature>
+          </WriteBookFeature>
         ),
+        SIGNED_OUT: () => (
+          <ReadBookFeature repoUrl={repoUrl} page={page}>
+            <SnippetsFeature repoUrl={repoUrl}>
+              <ReadBook />
+            </SnippetsFeature>
+          </ReadBookFeature>
+        ),
+        SIGNING_IN: () => <Loading />,
       })}
     </AppWrapper>
   );

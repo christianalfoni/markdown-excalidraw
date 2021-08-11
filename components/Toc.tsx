@@ -2,7 +2,7 @@ import { DocumentIcon } from "@heroicons/react/outline";
 import Link from "next/link";
 import React, { useCallback } from "react";
 import { match } from "react-states";
-import { Page, useProject } from "../features/project";
+import { Page, useWriteBook } from "../features/writeBook";
 import { classNames } from "../utils";
 
 const TocList = React.memo(
@@ -13,7 +13,7 @@ const TocList = React.memo(
   }: {
     pages: Page[];
     pageIndex: number;
-    onAddPage: () => void;
+    onAddPage?: () => void;
   }) => (
     <>
       {pages.map((page, index) => {
@@ -39,7 +39,7 @@ const TocList = React.memo(
                 {header ? header.name : `Page ${index + 1}`}
               </a>
             </Link>
-            {isCurrent ? (
+            {onAddPage && isCurrent ? (
               <button
                 onClick={onAddPage}
                 className="text-gray-300 hover:text-gray-300 group flex items-center px-2 py-2 text-sm justify-center font-medium rounded-md bg-gray-800 w-full"
@@ -55,8 +55,8 @@ const TocList = React.memo(
 );
 
 export const Toc = () => {
-  const [project, send] = useProject();
-  const { menu, pages, pageIndex } = project;
+  const [book, send] = useWriteBook();
+  const { menu, pages, pageIndex } = book;
 
   const onAddPage = useCallback(() => {
     send({ type: "ADD_PAGE" });

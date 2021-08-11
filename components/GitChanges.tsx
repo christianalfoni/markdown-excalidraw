@@ -1,7 +1,7 @@
 import React, { Dispatch } from "react";
 import { match, PickContext } from "react-states";
 import { GitStatus } from "../environments/project";
-import { ProjectContext, ProjectEvent } from "../features/project";
+import { WriteBookContext, WriteBookEvent } from "../features/writeBook";
 import { classNames } from "../utils";
 
 const renderGitStatusLabel = (status: GitStatus) => {
@@ -36,17 +36,15 @@ const renderGitStatusLabel = (status: GitStatus) => {
 };
 
 export const GitChanges = ({
-  project,
-  send,
+  book,
 }: {
-  project: PickContext<ProjectContext, "READY">;
-  send: Dispatch<ProjectEvent>;
+  book: PickContext<WriteBookContext, "READY">;
 }) => {
   return (
     <div
       className={classNames(
         "p-4 absolute top-0 min-h-screen transition-all ease-in-out w-72",
-        match(project.menu, {
+        match(book.menu, {
           TOC: () => "-right-72 duration-300",
           IDLE: () => "-right-72 duration-300",
           GIT: () => "right-0 duration-500",
@@ -54,7 +52,7 @@ export const GitChanges = ({
       )}
     >
       <ul>
-        {project.changes.map(({ path, status }) => (
+        {book.changes.map(({ path, status }) => (
           <li key={path} className="text-gray-500 mb-2 flex items-center">
             {renderGitStatusLabel(status)}
             {path}

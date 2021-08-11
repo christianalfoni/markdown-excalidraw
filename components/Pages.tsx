@@ -1,11 +1,12 @@
 import Markdown, { MarkdownToJSX } from "markdown-to-jsx";
 import Image from "next/image";
 import * as pathUtil from "path";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import SyntaxHighlighter from "react-syntax-highlighter";
-import { Excalidraw, useProject } from "../features/project";
+import { Page } from "../features/writeBook";
 import { useSnippets } from "../features/snippets";
 import { usePageState } from "../utils/usePageState";
+import { excalidrawsContext } from "./ExcalidrawsProvider";
 
 const codeStyle = {
   hljs: {
@@ -126,23 +127,6 @@ const codeStyle = {
   },
 };
 
-const excalidrawsContext = createContext<{ [id: string]: Excalidraw }>({});
-const ExcalidrawsProvider = ({
-  excalidraws,
-  children,
-}: {
-  excalidraws: {
-    [id: string]: Excalidraw;
-  };
-  children: React.ReactNode;
-}) => {
-  return (
-    <excalidrawsContext.Provider value={excalidraws}>
-      {children}
-    </excalidrawsContext.Provider>
-  );
-};
-
 const options: MarkdownToJSX.Options = {
   overrides: {
     h1({ children }) {
@@ -224,70 +208,66 @@ const options: MarkdownToJSX.Options = {
   },
 };
 
-export const Book = () => {
-  const [project] = useProject();
+export const Pages = ({ pages }: { pages: Page[] }) => {
   const { index, flip, next, prev } = usePageState();
-  const { pages } = project;
 
   return (
-    <ExcalidrawsProvider excalidraws={project.excalidraws}>
-      <div className="cover">
-        <div className="book">
+    <div className="cover">
+      <div className="book">
+        <div
+          className="book__page book__page--1 bg-gray-50 rounded-md py-4 px-6 border-gray-500 border"
+          onClick={() => {
+            prev();
+          }}
+        >
+          <Markdown options={options}>{pages[index]?.content ?? ""}</Markdown>
+          <span className="absolute bottom-2 left-2 text-xs text-gray-500">
+            Page {index + 1}
+          </span>
+        </div>
+
+        <div className="book__page book__page--4 bg-gray-50 rounded-md py-4 px-6 border-gray-500 border">
+          <Markdown options={options}>
+            {pages[index + 3]?.content ?? ""}
+          </Markdown>
+          <span className="absolute bottom-2 right-2 text-xs text-gray-500">
+            Page {index + 4}
+          </span>
+        </div>
+        <div
+          className={
+            "book__page book__page--2" +
+            {
+              0: "",
+              1: " transition-flip",
+              2: " flip",
+              3: " flip-2",
+            }[flip]
+          }
+        >
           <div
-            className="book__page book__page--1 bg-gray-50 rounded-md py-4 px-6 border-gray-500 border"
+            className="book__page-front bg-gray-50 rounded-md py-4 px-6 border-gray-500 border"
             onClick={() => {
-              prev();
+              next();
             }}
           >
-            <Markdown options={options}>{pages[index]?.content ?? ""}</Markdown>
-            <span className="absolute bottom-2 left-2 text-xs text-gray-500">
-              Page {index + 1}
-            </span>
-          </div>
-
-          <div className="book__page book__page--4 bg-gray-50 rounded-md py-4 px-6 border-gray-500 border">
             <Markdown options={options}>
-              {pages[index + 3]?.content ?? ""}
+              {pages[index + 1]?.content ?? ""}
             </Markdown>
             <span className="absolute bottom-2 right-2 text-xs text-gray-500">
-              Page {index + 4}
+              Page {index + 2}
             </span>
           </div>
-          <div
-            className={
-              "book__page book__page--2" +
-              {
-                0: "",
-                1: " transition-flip",
-                2: " flip",
-                3: " flip-2",
-              }[flip]
-            }
-          >
-            <div
-              className="book__page-front bg-gray-50 rounded-md py-4 px-6 border-gray-500 border"
-              onClick={() => {
-                next();
-              }}
-            >
-              <Markdown options={options}>
-                {pages[index + 1]?.content ?? ""}
-              </Markdown>
-              <span className="absolute bottom-2 right-2 text-xs text-gray-500">
-                Page {index + 2}
-              </span>
-            </div>
-            <div className="book__page-back bg-gray-50 rounded-md py-4 px-6 border-gray-500 border">
-              <Markdown options={options}>
-                {pages[index + 2]?.content ?? ""}
-              </Markdown>
-              <span className="absolute bottom-2 left-2 text-xs text-gray-500">
-                Page {index + 3}
-              </span>
-            </div>
+          <div className="book__page-back bg-gray-50 rounded-md py-4 px-6 border-gray-500 border">
+            <Markdown options={options}>
+              {pages[index + 2]?.content ?? ""}
+            </Markdown>
+            <span className="absolute bottom-2 left-2 text-xs text-gray-500">
+              Page {index + 3}
+            </span>
           </div>
         </div>
       </div>
-    </ExcalidrawsProvider>
+    </div>
   );
 };

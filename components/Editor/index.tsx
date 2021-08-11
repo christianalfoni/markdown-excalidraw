@@ -2,10 +2,8 @@ import { useEffect, useReducer } from "react";
 import {
   useEnterEffect,
   ContextTransition,
-  transition,
   createReducer,
   useTransientEffect,
-  PickContext,
   Context,
 } from "react-states";
 
@@ -89,7 +87,7 @@ type EditorEvent =
 type Transition = ContextTransition<EditorContext>;
 
 const changePosition = (
-  context: PickContext<EditorContext, "IDLE">,
+  context: EditorContext,
   {
     line,
     lines,
