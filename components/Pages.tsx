@@ -192,7 +192,10 @@ const options: MarkdownToJSX.Options = {
       if (exportToCanvas) {
         const canvas = exportToCanvas({
           elements: excalidraw.elements,
-          appState: excalidraw.appState,
+          appState: {
+            ...excalidraw.appState,
+            viewBackgroundColor: "transparent",
+          },
         });
         return (
           <Image
