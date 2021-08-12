@@ -45,7 +45,7 @@ export const GitChanges = ({
   return (
     <div
       className={classNames(
-        "p-4 absolute top-0 min-h-screen transition-all ease-in-out w-72",
+        "p-4 absolute top-0 h-screen transition-all ease-in-out w-72",
         match(book.menu, {
           TOC: () => "-right-72 duration-300",
           IDLE: () => "-right-72 duration-300",
