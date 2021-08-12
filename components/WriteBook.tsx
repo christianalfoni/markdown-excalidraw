@@ -39,7 +39,7 @@ export const WriteBook = () => {
     <ExcalidrawsProvider excalidraws={readyContext.excalidraws}>
       <div
         className={classNames(
-          "p-4 absolute top-0 h-screen w-screen transition-all ease-in-out",
+          "p-4 absolute top-0 h-screen transition-all ease-in-out",
           match(menu, {
             TOC: () => "left-0 duration-500",
             IDLE: () => "-left-72 duration-300",
