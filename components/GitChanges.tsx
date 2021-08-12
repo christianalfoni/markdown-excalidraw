@@ -37,8 +37,10 @@ const renderGitStatusLabel = (status: GitStatus) => {
 
 export const GitChanges = ({
   book,
+  send,
 }: {
-  book: PickContext<WriteBookContext, "READY">;
+  book: PickContext<WriteBookContext, "READY" | "SAVING">;
+  send: Dispatch<WriteBookEvent>;
 }) => {
   return (
     <div
@@ -59,7 +61,24 @@ export const GitChanges = ({
           </li>
         ))}
       </ul>
-      <button className="text-gray-300 w-full p-2 bg-gray-800 rounded-md mt-2 text-sm">
+      <button
+        onClick={() => {
+          send({
+            type: "SAVE",
+          });
+        }}
+        disabled={match(book, {
+          READY: () => false,
+          SAVING: () => true,
+        })}
+        className={classNames(
+          match(book, {
+            READY: () => "bg-gray-800 text-gray-300 hover:bg-gray-700",
+            SAVING: () => "text-gray-600",
+          }),
+          "w-full p-2 rounded-md mt-2 text-sm"
+        )}
+      >
         Save
       </button>
     </div>

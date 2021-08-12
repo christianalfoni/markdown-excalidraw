@@ -277,90 +277,102 @@ export const createProject = (): Project => {
     save(repoUrl, accessToken) {
       const projectPath = getProjectPath(repoUrl);
 
-      imports
-        .then(({ git, fs, http }) =>
-          getChanges(repoUrl)
-            .then((changes) =>
-              changes.reduce<{
-                added: string[];
-                modified: string[];
-                deleted: string[];
-              }>(
-                (aggr, change) => {
-                  if (
-                    change.status === "ADD_PARTIALLY_STAGED" ||
-                    change.status === "ADD_UNSTAGED"
-                  ) {
-                    aggr.added.push(change.path);
-                  } else if (
-                    change.status === "MODIFIED_PARTIALLY_STAGED" ||
-                    change.status === "MODIFIED_UNSTAGED"
-                  ) {
-                    aggr.modified.push(change.path);
-                  } else if (change.status === "DELETED_UNSTAGED") {
-                    aggr.deleted.push(change.path);
-                  }
-
-                  return aggr;
-                },
-                {
-                  added: [],
-                  modified: [],
-                  deleted: [],
+      imports.then(({ git, fs, http }) =>
+        getChanges(repoUrl)
+          .then((changes) =>
+            changes.reduce<{
+              added: string[];
+              modified: string[];
+              deleted: string[];
+            }>(
+              (aggr, change) => {
+                if (
+                  change.status === "ADD_PARTIALLY_STAGED" ||
+                  change.status === "ADD_UNSTAGED"
+                ) {
+                  aggr.added.push(change.path);
+                } else if (
+                  change.status === "MODIFIED_PARTIALLY_STAGED" ||
+                  change.status === "MODIFIED_UNSTAGED"
+                ) {
+                  aggr.modified.push(change.path);
+                } else if (change.status === "DELETED_UNSTAGED") {
+                  aggr.deleted.push(change.path);
                 }
-              )
+
+                return aggr;
+              },
+              {
+                added: [],
+                modified: [],
+                deleted: [],
+              }
             )
-            .then((filesToStage) =>
-              Promise.all([
-                filesToStage.added.map((path) =>
-                  git.add({
-                    fs,
-                    dir: projectPath,
-                    filepath: path,
-                  })
-                ),
-                filesToStage.modified.map((path) =>
-                  git.add({
-                    fs,
-                    dir: projectPath,
-                    filepath: path,
-                  })
-                ),
-                filesToStage.deleted.map((path) =>
-                  git.remove({
-                    fs,
-                    dir: projectPath,
-                    filepath: path,
-                  })
-                ),
-              ])
-            )
-            .then(() =>
-              git.commit({
-                fs,
-                dir: projectPath,
-                author: {
-                  name: "Christian Alfoni",
-                  email: "christianalfoni@gmail.com",
-                },
-                message: "Save",
-              })
-            )
-            .then(() =>
-              git.push({
+          )
+          .then((filesToStage) =>
+            Promise.all([
+              filesToStage.added.map((path) =>
+                git.add({
+                  fs,
+                  dir: projectPath,
+                  filepath: path,
+                })
+              ),
+              filesToStage.modified.map((path) =>
+                git.add({
+                  fs,
+                  dir: projectPath,
+                  filepath: path,
+                })
+              ),
+              filesToStage.deleted.map((path) =>
+                git.remove({
+                  fs,
+                  dir: projectPath,
+                  filepath: path,
+                })
+              ),
+            ])
+          )
+          .then(() =>
+            git.commit({
+              fs,
+              dir: projectPath,
+              author: {
+                name: "Christian Alfoni",
+                email: "christianalfoni@gmail.com",
+              },
+              message: "Save",
+            })
+          )
+          .then((commitSha) =>
+            git
+              .push({
                 fs,
                 dir: projectPath,
                 http,
-                onAuth: () => ({ username: accessToken }),
+                onAuth: () => ({
+                  username: accessToken,
+                }),
               })
-            )
-        )
-        .catch((error) => {
-          projectEvents.emit({
-            type: "PROJECT:SAVE_ERROR",
-            error: error.message,
-          });
-        });
+              .then(() => commitSha)
+          )
+          .then((commitSha) =>
+            getChanges(repoUrl).then((changes) => {
+              projectEvents.emit({
+                type: "PROJECT:SAVE_SUCCESS",
+                commitSha,
+                changes,
+              });
+            })
+          )
+          .catch((error) => {
+            projectEvents.emit({
+              type: "PROJECT:SAVE_ERROR",
+              error: error.message,
+            });
+          })
+      );
     },
   };
 };

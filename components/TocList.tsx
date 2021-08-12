@@ -5,7 +5,7 @@ import { match } from "react-states";
 import { Page, useWriteBook } from "../features/writeBook";
 import { classNames } from "../utils";
 
-const TocList = React.memo(
+export const TocList = React.memo(
   ({
     pages,
     pageIndex,
@@ -53,27 +53,3 @@ const TocList = React.memo(
     </>
   )
 );
-
-export const Toc = () => {
-  const [book, send] = useWriteBook();
-  const { menu, pages, pageIndex } = book;
-
-  const onAddPage = useCallback(() => {
-    send({ type: "ADD_PAGE" });
-  }, []);
-
-  return (
-    <div
-      className={classNames(
-        "p-4 absolute top-0 min-h-screen transition-all ease-in-out",
-        match(menu, {
-          TOC: () => "left-0 duration-500",
-          IDLE: () => "-left-72 duration-300",
-          GIT: () => "-left-72 duration-300",
-        })
-      )}
-    >
-      <TocList pages={pages} pageIndex={pageIndex} onAddPage={onAddPage} />
-    </div>
-  );
-};

@@ -70,6 +70,7 @@ export type ProjectEvent =
   | {
       type: "PROJECT:SAVE_SUCCESS";
       commitSha: string;
+      changes: GitChange[];
     }
   | {
       type: "PROJECT:SAVE_ERROR";

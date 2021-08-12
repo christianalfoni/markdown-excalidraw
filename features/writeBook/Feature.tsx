@@ -133,13 +133,25 @@ const reducer = createReducer<
       },
       context,
     ],
-    CHANGE_PAGE: ({ index }, context) => ({
+    CHANGE_PAGE: ({ index }, context): Transition => ({
       ...context,
       pageIndex: index,
       caretPosition: {
         line: 0,
         char: 0,
       },
+    }),
+    SAVE: (_, context): Transition => ({
+      ...context,
+      state: "SAVING",
+    }),
+  },
+  SAVING: {
+    "PROJECT:SAVE_SUCCESS": ({ commitSha, changes }, context) => ({
+      ...context,
+      state: "READY",
+      commitSha,
+      changes,
     }),
   },
 });
@@ -214,7 +226,7 @@ export const FeatureProvider = ({
     project.addPage(repoUrl, pageIndex + 1);
   });
 
-  useTransientEffect(context, "$SAVING", () => {
+  useEnterEffect(context, "SAVING", () => {
     project.save(repoUrl, accessToken);
   });
 

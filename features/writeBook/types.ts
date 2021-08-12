@@ -53,6 +53,11 @@ export type FeatureContext = Context<
             commitSha: string;
             changes: GitChange[];
           }
+        | {
+            state: "SAVING";
+            commitSha: string;
+            changes: GitChange[];
+          }
       ))
   | {
       state: "$UPDATING_PAGE";
@@ -73,9 +78,6 @@ export type FeatureContext = Context<
   | {
       state: "$ADDING_PAGE";
       pageIndex: number;
-    }
-  | {
-      state: "$SAVING";
     }
 >;
 
