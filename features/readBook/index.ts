@@ -4,9 +4,9 @@ export {
 } from "./Feature";
 
 export type {
-  FeatureContext as ReadBookContext,
-  FeatureEvent as ReadBookEvent,
+  State as ReadBookState,
+  Action as ReadBookAction,
   Page,
   Excalidraw,
-  MenuContext,
+  MenuState,
 } from "./Feature";

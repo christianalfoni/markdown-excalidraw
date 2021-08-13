@@ -1,7 +1,7 @@
 import React, { Dispatch } from "react";
-import { match, PickContext } from "react-states";
+import { match, PickState } from "react-states";
 import { GitStatus } from "../environments/project";
-import { WriteBookContext, WriteBookEvent } from "../features/writeBook";
+import { WriteBookState, WriteBookAction } from "../features/writeBook";
 import { classNames } from "../utils";
 
 const renderGitStatusLabel = (status: GitStatus) => {
@@ -39,8 +39,8 @@ export const GitChanges = ({
   book,
   send,
 }: {
-  book: PickContext<WriteBookContext, "READY" | "SAVING">;
-  send: Dispatch<WriteBookEvent>;
+  book: PickState<WriteBookState, "READY" | "SAVING">;
+  send: Dispatch<WriteBookAction>;
 }) => {
   return (
     <div

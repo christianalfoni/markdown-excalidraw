@@ -1,8 +1,7 @@
 import { DocumentIcon } from "@heroicons/react/outline";
 import Link from "next/link";
-import React, { useCallback } from "react";
-import { match } from "react-states";
-import { Page, useWriteBook } from "../features/writeBook";
+import React from "react";
+import { Page } from "../features/writeBook";
 import { classNames } from "../utils";
 
 export const TocList = React.memo(

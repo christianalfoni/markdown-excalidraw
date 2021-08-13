@@ -1,35 +1,32 @@
-import { useContext, useEffect, useReducer } from "react";
+import { useContext, useEffect, useReducer, useState } from "react";
 import {
   createContext,
-  createReducer,
-  useEnterEffect,
-  useEvents,
-  useTransientEffect,
+  Transitions,
+  useCommandEffect,
+  useStateEffect,
+  useStates,
+  useSubsription,
 } from "react-states";
 import { useDevtools } from "react-states/devtools";
-import { ProjectEvent } from "../../environments/project";
+import { ProjectSubscription } from "../../environments/project";
 import { useEnvironment } from "../../environments";
 import { useKeyboardShortcuts } from "./effects";
-import {
-  FeatureContext,
-  PrivateEvent,
-  FeatureEvent,
-  Transition,
-} from "./types";
+import { PrivateAction, Action, Transition, State, Command } from "./types";
 
-const featureContext = createContext<FeatureContext, FeatureEvent>();
+const featureContext = createContext<State, Action>();
 
-const reducer = createReducer<
-  FeatureContext,
-  FeatureEvent | PrivateEvent | ProjectEvent
->({
+const transitions: Transitions<
+  State,
+  Action | PrivateAction | ProjectSubscription,
+  Command
+> = {
   LOADING_PROJECT: {
     "PROJECT:LOAD_SUCCESS": (
       { excalidraws, pages, commitSha, changes },
-      context
+      state
     ): Transition => ({
-      ...context,
-      state: "READY",
+      ...state,
+      context: "READY",
       excalidraws,
       pages,
       commitSha,
@@ -37,52 +34,52 @@ const reducer = createReducer<
     }),
   },
   READY: {
-    "PROJECT:PAGES_UPDATE": ({ pages }, context): Transition => ({
-      ...context,
+    "PROJECT:PAGES_UPDATE": ({ pages }, state): Transition => ({
+      ...state,
       pages,
     }),
-    UPDATE_PAGE: ({ content }, context): Transition => [
+    UPDATE_PAGE: ({ content }, state): Transition => [
+      state,
       {
-        state: "$UPDATING_PAGE",
+        cmd: "UPDATE_PAGE",
         content,
-        pageIndex: context.pageIndex,
+        pageIndex: state.pageIndex,
       },
-      context,
     ],
-    CHANGE_MODE: ({ mode }, context): Transition => ({
-      ...context,
+    CHANGE_MODE: ({ mode }, state): Transition => ({
+      ...state,
       mode,
     }),
-    CHANGE_CARET_POSITION: ({ position }, context): Transition => ({
-      ...context,
+    CHANGE_CARET_POSITION: ({ position }, state): Transition => ({
+      ...state,
       caretPosition: position,
     }),
-    UPDATE_EXCALIDRAW: ({ excalidraw, id }, context): Transition => [
+    UPDATE_EXCALIDRAW: ({ excalidraw, id }, state): Transition => [
+      state,
       {
-        state: "$UPDATING_EXCALIDRAW",
+        cmd: "UPDATE_EXCALIDRAW",
         id,
         excalidraw,
       },
-      context,
     ],
-    TOGGLE_TOC: (_, context): Transition => ({
-      ...context,
+    TOGGLE_TOC: (_, state): Transition => ({
+      ...state,
       menu: {
-        state: context.menu.state === "TOC" ? "IDLE" : "TOC",
+        context: state.menu.context === "TOC" ? "IDLE" : "TOC",
       },
     }),
-    TOGGLE_GIT: (_, context): Transition => ({
-      ...context,
+    TOGGLE_GIT: (_, state): Transition => ({
+      ...state,
       menu: {
-        state: context.menu.state === "GIT" ? "IDLE" : "GIT",
+        context: state.menu.context === "GIT" ? "IDLE" : "GIT",
       },
     }),
     "PROJECT:GIT_UPDATE": ({ changes }, context): Transition => ({
       ...context,
       changes,
     }),
-    INSERT_EXCALIDRAW: (_, context): Transition => {
-      const { pages, pageIndex, caretPosition } = context;
+    INSERT_EXCALIDRAW: (_, state): Transition => {
+      const { pages, pageIndex, caretPosition } = state;
       const content = pages[pageIndex].content.split("\n");
       const firstLines = content.slice(0, caretPosition.line + 1);
       const lastLines = content.slice(caretPosition.line);
@@ -94,21 +91,21 @@ const reducer = createReducer<
 
         return [
           {
-            state: "$INSERTING_EXCALIDRAW",
-            content: [...firstLines, inserted, ...lastLines].join("\n"),
-            id,
-            pageIndex,
-          },
-          {
-            ...context,
+            ...state,
             caretPosition: {
               line: caretPosition.line,
               char: caretPosition.char + inserted.length,
             },
             mode: {
-              state: "DRAWING" as const,
+              context: "DRAWING" as const,
               id,
             },
+          },
+          {
+            cmd: "INSERT_EXCALIDRAW",
+            content: [...firstLines, inserted, ...lastLines].join("\n"),
+            id,
+            pageIndex,
           },
         ];
       }
@@ -116,60 +113,61 @@ const reducer = createReducer<
 
       if (excalidrawRef) {
         return {
-          ...context,
+          ...state,
           mode: {
-            state: "DRAWING" as const,
+            context: "DRAWING",
             id: excalidrawRef[1],
           },
         };
       }
 
-      return context;
+      return state;
     },
-    ADD_PAGE: (_, context): Transition => [
+    ADD_PAGE: (_, state): Transition => [
+      state,
       {
-        state: "$ADDING_PAGE",
-        pageIndex: context.pageIndex,
+        cmd: "ADD_PAGE",
+        pageIndex: state.pageIndex,
       },
-      context,
     ],
-    CHANGE_PAGE: ({ index }, context): Transition => ({
-      ...context,
+    CHANGE_PAGE: ({ index }, state): Transition => ({
+      ...state,
       pageIndex: index,
       caretPosition: {
         line: 0,
         char: 0,
       },
     }),
-    SAVE: (_, context): Transition => ({
-      ...context,
-      state: "SAVING",
+    SAVE: (_, state): Transition => ({
+      ...state,
+      context: "SAVING",
     }),
   },
   SAVING: {
-    "PROJECT:SAVE_SUCCESS": ({ commitSha, changes }, context) => ({
-      ...context,
-      state: "READY",
+    "PROJECT:SAVE_SUCCESS": ({ commitSha, changes }, state): Transition => ({
+      ...state,
+      context: "READY",
       commitSha,
       changes,
     }),
   },
-});
+};
 
 export const useFeature = () => useContext(featureContext);
 
 export const FeatureProvider = ({
   children,
   repoUrl,
+  branch,
   accessToken,
   page,
-  initialContext = {
-    state: "LOADING_PROJECT",
+  initialState = {
+    context: "LOADING_PROJECT",
     pages: [],
     excalidraws: {},
     pageIndex: page,
-    mode: { state: "READING" },
-    menu: { state: "IDLE" },
+    mode: { context: "READING" },
+    menu: { context: "IDLE" },
     caretPosition: {
       line: 0,
       char: 0,
@@ -179,55 +177,52 @@ export const FeatureProvider = ({
   children: React.ReactNode;
   page: number;
   repoUrl: string;
+  branch: string;
   accessToken: string;
-  initialContext?: FeatureContext;
+  initialState?: State;
 }) => {
   const { project } = useEnvironment();
-  const feature = useReducer(reducer, initialContext);
+  const feature = useStates(initialState, transitions);
 
   if (process.browser && process.env.NODE_ENV === "development") {
     useDevtools("Project", feature);
   }
 
-  const [context, send] = feature;
+  const [state, dispatch] = feature;
 
-  useEvents(project.events, send);
+  useSubsription(project.subscription, dispatch);
 
   useKeyboardShortcuts(feature);
 
   useEffect(() => {
-    send({
+    dispatch({
       type: "CHANGE_PAGE",
       index: Number(page),
     });
   }, [page]);
 
-  useEnterEffect(context, "LOADING_PROJECT", () => {
-    project.load(repoUrl);
+  useStateEffect(state, "LOADING_PROJECT", () => {
+    project.load(repoUrl, branch);
   });
 
-  useTransientEffect(context, "$UPDATING_PAGE", ({ pageIndex, content }) => {
+  useStateEffect(state, "SAVING", () => {
+    project.save(repoUrl, accessToken);
+  });
+
+  useCommandEffect(state, "UPDATE_PAGE", ({ pageIndex, content }) => {
     project.updatePage(repoUrl, pageIndex, content);
   });
 
-  useTransientEffect(context, "$UPDATING_EXCALIDRAW", ({ id, excalidraw }) => {
+  useCommandEffect(state, "UPDATE_EXCALIDRAW", ({ id, excalidraw }) => {
     project.updateExcalidraw(repoUrl, id, excalidraw);
   });
 
-  useTransientEffect(
-    context,
-    "$INSERTING_EXCALIDRAW",
-    ({ content, pageIndex }) => {
-      project.updatePage(repoUrl, pageIndex, content);
-    }
-  );
-
-  useTransientEffect(context, "$ADDING_PAGE", ({ pageIndex }) => {
-    project.addPage(repoUrl, pageIndex + 1);
+  useCommandEffect(state, "INSERT_EXCALIDRAW", ({ content, pageIndex }) => {
+    project.updatePage(repoUrl, pageIndex, content);
   });
 
-  useEnterEffect(context, "SAVING", () => {
-    project.save(repoUrl, accessToken);
+  useCommandEffect(state, "ADD_PAGE", ({ pageIndex }) => {
+    project.addPage(repoUrl, pageIndex + 1);
   });
 
   return (

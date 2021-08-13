@@ -1,8 +1,8 @@
-import { events } from "react-states";
+import { subscription } from "react-states";
 import { Project } from ".";
 
 export const createProject = (): Project => ({
-  events: events(),
+  subscription: subscription(),
   load() {},
   updatePage() {},
   updateExcalidraw() {},

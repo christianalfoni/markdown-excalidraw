@@ -1,8 +1,8 @@
-import { events } from "react-states";
+import { subscription } from "react-states";
 import { Auth } from ".";
 
 export const createAuth = (): Auth => ({
-  events: events(),
+  subscription: subscription(),
   authenticate() {},
   signIn() {},
   signOut() {},

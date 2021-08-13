@@ -1,29 +1,29 @@
-import { Context, ContextTransition } from "react-states";
+import { StateTransition } from "react-states";
 import { Excalidraw, GitChange, Page } from "../../environments/project";
 
 export type { Excalidraw, Page };
 
-export type ModeContext =
+export type ModeState =
   | {
-      state: "EDITING";
+      context: "EDITING";
     }
   | {
-      state: "READING";
+      context: "READING";
     }
   | {
-      state: "DRAWING";
+      context: "DRAWING";
       id: string;
     };
 
-export type MenuContext =
+export type MenuState =
   | {
-      state: "IDLE";
+      context: "IDLE";
     }
   | {
-      state: "TOC";
+      context: "TOC";
     }
   | {
-      state: "GIT";
+      context: "GIT";
     };
 
 export type CaretPosition = {
@@ -31,64 +31,64 @@ export type CaretPosition = {
   char: number;
 };
 
-type BaseContext = {
+type BaseState = {
   pageIndex: number;
   pages: Page[];
   excalidraws: {
     [id: string]: Excalidraw;
   };
-  mode: ModeContext;
-  menu: MenuContext;
+  mode: ModeState;
+  menu: MenuState;
   caretPosition: CaretPosition;
 };
 
-export type FeatureContext = Context<
-  | (BaseContext &
-      (
-        | {
-            state: "LOADING_PROJECT";
-          }
-        | {
-            state: "READY";
-            commitSha: string;
-            changes: GitChange[];
-          }
-        | {
-            state: "SAVING";
-            commitSha: string;
-            changes: GitChange[];
-          }
-      ))
+export type State = BaseState &
+  (
+    | {
+        context: "LOADING_PROJECT";
+      }
+    | {
+        context: "READY";
+        commitSha: string;
+        changes: GitChange[];
+      }
+    | {
+        context: "SAVING";
+        commitSha: string;
+        changes: GitChange[];
+      }
+  );
+
+export type Command =
   | {
-      state: "$UPDATING_PAGE";
+      cmd: "UPDATE_PAGE";
       pageIndex: number;
       content: string;
     }
   | {
-      state: "$INSERTING_EXCALIDRAW";
+      cmd: "INSERT_EXCALIDRAW";
       content: string;
       id: string;
       pageIndex: number;
     }
   | {
-      state: "$UPDATING_EXCALIDRAW";
+      cmd: "UPDATE_EXCALIDRAW";
       id: string;
       excalidraw: Excalidraw;
     }
   | {
-      state: "$ADDING_PAGE";
+      cmd: "ADD_PAGE";
       pageIndex: number;
-    }
->;
+    };
 
-export type FeatureEvent =
+export type Action =
   | {
       type: "UPDATE_PAGE";
       content: string;
     }
   | {
       type: "CHANGE_MODE";
-      mode: ModeContext;
+      mode: ModeState;
     }
   | {
       type: "CHANGE_CARET_POSITION";
@@ -112,7 +112,7 @@ export type FeatureEvent =
       type: "SAVE";
     };
 
-export type PrivateEvent =
+export type PrivateAction =
   | {
       type: "INSERT_EXCALIDRAW";
     }
@@ -121,4 +121,4 @@ export type PrivateEvent =
       index: number;
     };
 
-export type Transition = ContextTransition<FeatureContext>;
+export type Transition = StateTransition<State, Command>;

@@ -1,5 +1,5 @@
-import { events } from "react-states";
-import { Excalidraw, GitStatus, Page, Project, ProjectEvent } from ".";
+import { subscription } from "react-states";
+import { Excalidraw, GitStatus, Page, Project, ProjectSubscription } from ".";
 import MarkdownContents from "markdown-contents";
 import debounce from "lodash.debounce";
 
@@ -22,7 +22,7 @@ const statusToString: {
 };
 
 export const createProject = (): Project => {
-  const projectEvents = events<ProjectEvent>();
+  const projectSubscription = subscription<ProjectSubscription>();
   const imports = Promise.all([
     import("isomorphic-git"),
     import("@isomorphic-git/lightning-fs"),
@@ -62,7 +62,7 @@ export const createProject = (): Project => {
 
   const emitChangesDebounced = debounce((repoUrl: string) => {
     getChanges(repoUrl).then((changes) => {
-      projectEvents.emit({
+      projectSubscription.emit({
         type: "PROJECT:GIT_UPDATE",
         changes,
       });
@@ -78,8 +78,8 @@ export const createProject = (): Project => {
   } = {};
 
   return {
-    events: projectEvents,
-    load(repoUrl) {
+    subscription: projectSubscription,
+    load(repoUrl, branch) {
       imports.then(({ git, fs, http }) => {
         const projectPath = getProjectPath(repoUrl);
 
@@ -91,6 +91,8 @@ export const createProject = (): Project => {
               dir: projectPath,
               url: repoUrl,
               corsProxy: "https://cors.isomorphic-git.org",
+              ref: branch,
+              singleBranch: true,
             })
           );
         }
@@ -115,7 +117,7 @@ export const createProject = (): Project => {
         }
 
         function getCommitSha() {
-          return git.resolveRef({ fs, dir: projectPath, ref: "main" });
+          return git.resolveRef({ fs, dir: projectPath, ref: branch });
         }
 
         function getPages(pages: string[]) {
@@ -181,7 +183,7 @@ export const createProject = (): Project => {
             pages = pagesData;
             excalidraws = excalidrawsData;
 
-            this.events.emit({
+            this.subscription.emit({
               type: "PROJECT:LOAD_SUCCESS",
               pages,
               excalidraws,
@@ -190,7 +192,7 @@ export const createProject = (): Project => {
             });
           })
           .catch((error) => {
-            this.events.emit({
+            this.subscription.emit({
               type: "PROJECT:LOAD_ERROR",
               error: error.message,
             });
@@ -238,7 +240,7 @@ export const createProject = (): Project => {
         ...pages.slice(index + 1),
       ];
 
-      this.events.emit({
+      this.subscription.emit({
         type: "PROJECT:PAGES_UPDATE",
         pages,
       });
@@ -253,7 +255,7 @@ export const createProject = (): Project => {
     },
     loadSnippet(repoUrl, snippetPath) {
       if (snippets[snippetPath]) {
-        this.events.emit({
+        this.subscription.emit({
           type: "PROJECT:LOAD_SNIPPET_SUCCESS",
           path: snippetPath,
           code: snippets[snippetPath],
@@ -266,7 +268,7 @@ export const createProject = (): Project => {
           })
           .then((content) => {
             snippets[snippetPath] = new TextDecoder().decode(content);
-            this.events.emit({
+            this.subscription.emit({
               type: "PROJECT:LOAD_SNIPPET_SUCCESS",
               path: snippetPath,
               code: snippets[snippetPath],
@@ -359,7 +361,7 @@ export const createProject = (): Project => {
           )
           .then((commitSha) =>
             getChanges(repoUrl).then((changes) => {
-              projectEvents.emit({
+              projectSubscription.emit({
                 type: "PROJECT:SAVE_SUCCESS",
                 commitSha,
                 changes,
@@ -367,7 +369,7 @@ export const createProject = (): Project => {
             })
           )
           .catch((error) => {
-            projectEvents.emit({
+            projectSubscription.emit({
               type: "PROJECT:SAVE_ERROR",
               error: error.message,
             });

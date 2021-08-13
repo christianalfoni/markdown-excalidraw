@@ -1,96 +1,93 @@
-import { createContext, Dispatch, useContext, useReducer } from "react";
+import { useContext } from "react";
 import {
-  Context,
-  ContextTransition,
-  transition,
-  useEnterEffect,
-  useEvents,
+  createContext,
+  StateTransition,
+  Transitions,
+  useStateEffect,
+  useStates,
+  useSubsription,
 } from "react-states";
 import { useDevtools } from "react-states/devtools";
 import { useEnvironment } from "../../environments";
-import { AuthEvent } from "../../environments/auth";
+import { AuthSubscription } from "../../environments/auth";
 
-type FeatureContext = Context<
+type State =
   | {
-      state: "AUTHENTICATING";
+      context: "AUTHENTICATING";
     }
   | {
-      state: "SIGNED_OUT";
+      context: "SIGNED_OUT";
     }
   | {
-      state: "SIGNING_IN";
+      context: "SIGNING_IN";
     }
   | {
-      state: "SIGNED_IN";
+      context: "SIGNED_IN";
       accessToken: string;
-    }
->;
+    };
 
-type FeatureEvent = {
+type Action = {
   type: "SIGN_IN";
 };
 
-type Transition = ContextTransition<FeatureContext>;
+type Transition = StateTransition<State>;
 
-const featureContext = createContext<[FeatureContext, Dispatch<FeatureEvent>]>(
-  [] as any
-);
+const featureContext = createContext<State, Action>();
 
-const reducer = (context: FeatureContext, event: FeatureEvent | AuthEvent) =>
-  transition(context, event, {
-    AUTHENTICATING: {
-      "AUTH:AUTHENTICATE_SUCCESS": ({ accessToken }): Transition => ({
-        state: "SIGNED_IN",
-        accessToken,
-      }),
-      "AUTH:AUTHENTICATE_ERROR": (): Transition => ({
-        state: "SIGNED_OUT",
-      }),
-    },
-    SIGNED_IN: {},
-    SIGNED_OUT: {
-      SIGN_IN: (): Transition => ({
-        state: "SIGNING_IN",
-      }),
-    },
-    SIGNING_IN: {
-      "AUTH:AUTHENTICATE_SUCCESS": ({ accessToken }): Transition => ({
-        state: "SIGNED_IN",
-        accessToken,
-      }),
-      "AUTH:AUTHENTICATE_ERROR": (): Transition => ({
-        state: "SIGNED_OUT",
-      }),
-    },
-  });
+const transitions: Transitions<State, Action | AuthSubscription> = {
+  AUTHENTICATING: {
+    "AUTH:AUTHENTICATE_SUCCESS": ({ accessToken }): Transition => ({
+      context: "SIGNED_IN",
+      accessToken,
+    }),
+    "AUTH:AUTHENTICATE_ERROR": (): Transition => ({
+      context: "SIGNED_OUT",
+    }),
+  },
+  SIGNED_IN: {},
+  SIGNED_OUT: {
+    SIGN_IN: (): Transition => ({
+      context: "SIGNING_IN",
+    }),
+  },
+  SIGNING_IN: {
+    "AUTH:AUTHENTICATE_SUCCESS": ({ accessToken }): Transition => ({
+      context: "SIGNED_IN",
+      accessToken,
+    }),
+    "AUTH:AUTHENTICATE_ERROR": (): Transition => ({
+      context: "SIGNED_OUT",
+    }),
+  },
+};
 
 export const useFeature = () => useContext(featureContext);
 
 export const FeatureProvider = ({
   children,
-  initialContext = {
-    state: "AUTHENTICATING",
+  initialState = {
+    context: "AUTHENTICATING",
   },
 }: {
   children: React.ReactNode;
-  initialContext?: FeatureContext;
+  initialState?: State;
 }) => {
   const { auth } = useEnvironment();
-  const feature = useReducer(reducer, initialContext);
+  const feature = useStates(initialState, transitions);
 
   if (process.browser && process.env.NODE_ENV === "development") {
     useDevtools("Session", feature);
   }
 
-  const [context, send] = feature;
+  const [state, dispatch] = feature;
 
-  useEvents(auth.events, send);
+  useSubsription(auth.subscription, dispatch);
 
-  useEnterEffect(context, "AUTHENTICATING", () => {
+  useStateEffect(state, "AUTHENTICATING", () => {
     auth.authenticate();
   });
 
-  useEnterEffect(context, "SIGNING_IN", () => {
+  useStateEffect(state, "SIGNING_IN", () => {
     auth.signIn();
   });
 

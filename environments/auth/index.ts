@@ -1,6 +1,6 @@
-import { Events } from "react-states";
+import { Subscription } from "react-states";
 
-export type AuthEvent =
+export type AuthSubscription =
   | {
       type: "AUTH:AUTHENTICATE_SUCCESS";
       accessToken: string;
@@ -26,7 +26,7 @@ export type AuthEvent =
     };
 
 export interface Auth {
-  events: Events<AuthEvent>;
+  subscription: Subscription<AuthSubscription>;
   authenticate(): void;
   signIn(): void;
   signOut(): void;

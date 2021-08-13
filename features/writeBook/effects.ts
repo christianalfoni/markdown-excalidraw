@@ -1,33 +1,33 @@
 import { Dispatch, useEffect } from "react";
 
-import { FeatureContext, FeatureEvent, PrivateEvent } from "./types";
+import { Action, PrivateAction, State } from "./types";
 
-export const useKeyboardShortcuts = ([context, send]: [
-  FeatureContext,
-  Dispatch<FeatureEvent | PrivateEvent>
+export const useKeyboardShortcuts = ([state, send]: [
+  State,
+  Dispatch<Action | PrivateAction>
 ]) => {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Tab") {
         event.preventDefault();
-        if (context.mode.state === "EDITING") {
+        if (state.mode.context === "EDITING") {
           send({
             type: "CHANGE_MODE",
-            mode: { state: "READING" },
+            mode: { context: "READING" },
           });
-        } else if (context.mode.state === "READING") {
+        } else if (state.mode.context === "READING") {
           send({
             type: "CHANGE_MODE",
-            mode: { state: "EDITING" },
+            mode: { context: "EDITING" },
           });
         }
       }
 
       if (event.metaKey && event.key === "e") {
-        if (context.mode.state === "DRAWING") {
+        if (state.mode.context === "DRAWING") {
           send({
             type: "CHANGE_MODE",
-            mode: { state: "EDITING" },
+            mode: { context: "EDITING" },
           });
         } else {
           send({
@@ -41,5 +41,5 @@ export const useKeyboardShortcuts = ([context, send]: [
     return () => {
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [context.mode]);
+  }, [state.mode]);
 };

@@ -4,11 +4,11 @@ export {
 } from "./Feature";
 
 export type {
-  FeatureContext as WriteBookContext,
-  FeatureEvent as WriteBookEvent,
+  State as WriteBookState,
+  Action as WriteBookAction,
   CaretPosition,
   Page,
   Excalidraw,
-  MenuContext,
-  ModeContext,
+  MenuState,
+  ModeState,
 } from "./types";

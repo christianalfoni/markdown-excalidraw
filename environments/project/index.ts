@@ -1,6 +1,6 @@
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/types/element/types";
 import type { AppState } from "@excalidraw/excalidraw/types/types";
-import { Events } from "react-states";
+import { Subscription } from "react-states";
 
 export type Excalidraw = {
   elements: readonly ExcalidrawElement[];
@@ -35,7 +35,7 @@ export type GitChange = {
   status: GitStatus;
 };
 
-export type ProjectEvent =
+export type ProjectSubscription =
   | {
       type: "PROJECT:LOAD_SUCCESS";
       pages: Page[];
@@ -78,8 +78,8 @@ export type ProjectEvent =
     };
 
 export type Project = {
-  events: Events<ProjectEvent>;
-  load: (repoUrl: string) => void;
+  subscription: Subscription<ProjectSubscription>;
+  load: (repoUrl: string, branch: string) => void;
   updatePage(repoUrl: string, pageIndex: number, content: string): void;
   updateExcalidraw(repoUrl: string, id: string, excalidraw: Excalidraw): void;
   addPage(repoUrl: string, index: number): void;

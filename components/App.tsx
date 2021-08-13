@@ -13,7 +13,8 @@ import { ReadBookFeature } from "../features/readBook";
 export const App = () => {
   const [session] = useSession();
   const router = useRouter();
-  const repoUrl = "https://github.com/christianalfoni/test-book";
+  const repoUrl = "https://github.com/christianalfoni/react-states";
+  const branch = "main";
   const page = router.query.page ? Number(router.query.page) : 0;
 
   return (
@@ -23,6 +24,7 @@ export const App = () => {
         SIGNED_IN: ({ accessToken }) => (
           <WriteBookFeature
             repoUrl={repoUrl}
+            branch={branch}
             accessToken={accessToken}
             page={page}
           >
@@ -32,7 +34,7 @@ export const App = () => {
           </WriteBookFeature>
         ),
         SIGNED_OUT: () => (
-          <ReadBookFeature repoUrl={repoUrl} page={page}>
+          <ReadBookFeature repoUrl={repoUrl} branch={branch} page={page}>
             <SnippetsFeature repoUrl={repoUrl}>
               <ReadBook />
             </SnippetsFeature>

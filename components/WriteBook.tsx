@@ -1,12 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { ExcalidrawAPIRefValue } from "@excalidraw/excalidraw/types/types";
 import type ExcalidrawComponent from "@excalidraw/excalidraw";
-import {
-  Excalidraw,
-  useWriteBook,
-  WriteBookContext,
-} from "../features/writeBook";
-import { match, PickContext } from "react-states";
+import { useWriteBook, WriteBookState } from "../features/writeBook";
+import { match, PickState } from "react-states";
 import { Pages } from "./Pages";
 import { EditPage } from "./EditPage";
 import { Loading } from "./Loading";
@@ -34,9 +30,9 @@ export const WriteBook = () => {
   }, []);
 
   const renderBook = (
-    readyContext: PickContext<WriteBookContext, "READY" | "SAVING">
+    readyState: PickState<WriteBookState, "READY" | "SAVING">
   ) => (
-    <ExcalidrawsProvider excalidraws={readyContext.excalidraws}>
+    <ExcalidrawsProvider excalidraws={readyState.excalidraws}>
       <div
         className={classNames(
           "p-4 absolute top-0 h-screen transition-all ease-in-out",
@@ -73,7 +69,7 @@ export const WriteBook = () => {
           }}
           className="w-6 h-6 text-gray-100 absolute top-4 right-4"
         />
-        {readyContext.changes.length ? (
+        {readyState.changes.length ? (
           <span className="bg-red-500 w-3 h-3 top-3 right-4 rounded-full absolute border-2 border-gray-900" />
         ) : null}
         <div className="mx-auto flex items-center">
@@ -129,7 +125,7 @@ export const WriteBook = () => {
           })}
         </div>
       </div>
-      <GitChanges book={readyContext} send={send} />
+      <GitChanges book={readyState} send={send} />
     </ExcalidrawsProvider>
   );
 

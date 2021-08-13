@@ -1,10 +1,10 @@
 import { useEffect, useReducer } from "react";
 import {
-  useEnterEffect,
-  ContextTransition,
-  createReducer,
-  useTransientEffect,
-  Context,
+  StateTransition,
+  Transitions,
+  useCommandEffect,
+  useStateEffect,
+  useStates,
 } from "react-states";
 
 import { useCanvas } from "./useCanvas";
@@ -14,41 +14,38 @@ const PADDING = 10;
 const LINE_LENGTH = 75;
 const FONT_SIZE = 16;
 
-type BaseContext = {
+type State = {
+  context: "IDLE";
   lines: string[];
   line: number;
   char: number;
   lastPositioning: number;
 };
 
-type EditorContext = Context<
-  | (BaseContext & {
-      state: "IDLE";
-    })
+type Command =
   | {
-      state: "$INSERTING";
+      cmd: "INSERT";
       key: string;
       line: number;
       lines: string[];
       char: number;
     }
   | {
-      state: "$REMOVING";
+      cmd: "REMOVE";
       line: number;
       lines: string[];
       char: number;
     }
   | {
-      state: "$CHANGING_POSITION";
+      cmd: "CHANGE_POSITION";
       lines: string[];
       prevLines: string[];
       prevLine: number;
       line: number;
       char: number;
-    }
->;
+    };
 
-type EditorEvent =
+type Action =
   | {
       type: "CHAR_INSERT";
       key: string;
@@ -84,10 +81,10 @@ type EditorEvent =
       type: "NEXT_PARAGRAPH";
     };
 
-type Transition = ContextTransition<EditorContext>;
+type Transition = StateTransition<State, Command>;
 
 const changePosition = (
-  context: EditorContext,
+  state: State,
   {
     line,
     lines,
@@ -100,33 +97,33 @@ const changePosition = (
 ): Transition => {
   return [
     {
-      state: "$CHANGING_POSITION",
-      char,
-      line,
-      lines,
-      prevLine: context.line,
-      prevLines: context.lines,
-    },
-    {
-      ...context,
+      ...state,
       line,
       lines,
       char,
       lastPositioning: Date.now(),
     },
+    {
+      cmd: "CHANGE_POSITION",
+      char,
+      line,
+      lines,
+      prevLine: state.line,
+      prevLines: state.lines,
+    },
   ];
 };
 
-const reducer = createReducer<EditorContext, EditorEvent>({
+const transitions: Transitions<State, Action, Command> = {
   IDLE: {
-    CHAR_INSERT: ({ key }, context): Transition => {
-      const { lines, line, char } = context;
+    CHAR_INSERT: ({ key }, state): Transition => {
+      const { lines, line, char } = state;
 
       if (lines[line].length === LINE_LENGTH) {
         const currentWords = lines[line].split(" ");
         const lastWord = currentWords.pop() || "";
 
-        return changePosition(context, {
+        return changePosition(state, {
           char: lastWord.length + 1,
           line: line + 1,
           lines: [
@@ -147,28 +144,29 @@ const reducer = createReducer<EditorContext, EditorEvent>({
 
       return [
         {
-          state: "$INSERTING",
+          ...state,
+          lines: newLines,
+          char: newChar,
+        },
+        {
+          cmd: "INSERT",
           key,
           line,
           lines: newLines,
           char: newChar,
         },
-        {
-          ...context,
-          lines: newLines,
-          char: newChar,
-        },
       ];
     },
-    CHAR_REMOVE: (_, context): Transition => {
-      const { lines, line, char } = context;
+
+    CHAR_REMOVE: (_, state): Transition => {
+      const { lines, line, char } = state;
 
       if (char === 0 && line === 0) {
-        return context;
+        return state;
       }
 
       if (char === 0) {
-        return changePosition(context, {
+        return changePosition(state, {
           line: line - 1,
           char: lines[line - 1].length,
           lines: [...lines.slice(0, line), ...lines.slice(line + 1)],
@@ -184,90 +182,90 @@ const reducer = createReducer<EditorContext, EditorEvent>({
 
       return [
         {
-          state: "$REMOVING",
-          line,
+          ...state,
           lines: newLines,
           char: newChar,
         },
         {
-          ...context,
+          cmd: "REMOVE",
+          line,
           lines: newLines,
           char: newChar,
         },
       ];
     },
-    NEW_LINE: (_, context): Transition => {
-      const { line, lines } = context;
+    NEW_LINE: (_, state): Transition => {
+      const { line, lines } = state;
 
-      return changePosition(context, {
+      return changePosition(state, {
         line: line + 1,
         char: 0,
         lines: [...lines.slice(0, line + 1), "", ...lines.slice(line + 1)],
       });
     },
-    NEXT_LINE: (_, context): Transition => {
-      if (context.line + 1 >= context.lines.length) {
-        return context;
+    NEXT_LINE: (_, state): Transition => {
+      if (state.line + 1 >= state.lines.length) {
+        return state;
       }
 
-      return changePosition(context, {
-        line: context.line + 1,
-        char: Math.min(context.lines[context.line + 1].length, context.char),
-        lines: context.lines,
+      return changePosition(state, {
+        line: state.line + 1,
+        char: Math.min(state.lines[state.line + 1].length, state.char),
+        lines: state.lines,
       });
     },
-    PREV_LINE: (_, context): Transition => {
-      if (context.line - 1 < 0) {
-        return context;
+    PREV_LINE: (_, state): Transition => {
+      if (state.line - 1 < 0) {
+        return state;
       }
 
-      return changePosition(context, {
-        line: context.line - 1,
-        char: Math.min(context.lines[context.line - 1].length, context.char),
-        lines: context.lines,
+      return changePosition(state, {
+        line: state.line - 1,
+        char: Math.min(state.lines[state.line - 1].length, state.char),
+        lines: state.lines,
       });
     },
-    NEXT_CHAR: (_, context): Transition => {
-      const { char, lines, line } = context;
+    NEXT_CHAR: (_, state): Transition => {
+      const { char, lines, line } = state;
       if (char < lines[line].length) {
-        return changePosition(context, {
-          line: context.line,
+        return changePosition(state, {
+          line: state.line,
           char: char + 1,
-          lines: context.lines,
+          lines: state.lines,
         });
       } else if (line + 1 < lines.length) {
-        return changePosition(context, {
+        return changePosition(state, {
           line: line + 1,
           char: 0,
-          lines: context.lines,
+          lines: state.lines,
         });
       }
 
-      return context;
+      return state;
     },
-    PREV_CHAR: (_, context): Transition => {
-      const { char, lines, line } = context;
+    PREV_CHAR: (_, state): Transition => {
+      const { char, lines, line } = state;
       if (char > 0) {
-        return changePosition(context, {
+        return changePosition(state, {
           line,
           char: char - 1,
           lines,
         });
       } else if (line > 0) {
-        return changePosition(context, {
+        return changePosition(state, {
           line: line - 1,
           char: lines[line - 1].length,
           lines,
         });
       }
 
-      return context;
+      return state;
     },
-    PREV_WORD: (_, context): Transition => {
-      const { lines, char, line, lastPositioning } = context;
+    PREV_WORD: (_, state): Transition => {
+      const { lines, char, line, lastPositioning } = state;
 
       if (Date.now() - lastPositioning < 150) {
-        return changePosition(context, {
+        return changePosition(state, {
           lines,
           line,
           char: 0,
@@ -283,17 +281,17 @@ const reducer = createReducer<EditorContext, EditorEvent>({
         }
       }
 
-      return changePosition(context, {
+      return changePosition(state, {
         lines,
         line,
         char: Math.max(newChar, 0),
       });
     },
-    NEXT_WORD: (_, context): Transition => {
-      const { char, lines, line, lastPositioning } = context;
+    NEXT_WORD: (_, state): Transition => {
+      const { char, lines, line, lastPositioning } = state;
 
       if (Date.now() - lastPositioning < 150) {
-        return changePosition(context, {
+        return changePosition(state, {
           lines,
           line,
           char: lines[line].length,
@@ -308,17 +306,17 @@ const reducer = createReducer<EditorContext, EditorEvent>({
         }
       }
 
-      return changePosition(context, {
+      return changePosition(state, {
         lines,
         line,
         char: Math.min(newChar, lines[line].length),
       });
     },
-    NEXT_PARAGRAPH: (_, context): Transition => {
-      const { line, lines, lastPositioning } = context;
+    NEXT_PARAGRAPH: (_, state): Transition => {
+      const { line, lines, lastPositioning } = state;
 
       if (Date.now() - lastPositioning < 150) {
-        return changePosition(context, {
+        return changePosition(state, {
           lines,
           line: lines.length - 1,
           char: 0,
@@ -336,17 +334,17 @@ const reducer = createReducer<EditorContext, EditorEvent>({
 
       newLine = Math.min(newLine, lines.length - 1);
 
-      return changePosition(context, {
+      return changePosition(state, {
         lines,
         line: newLine,
         char: 0,
       });
     },
-    PREV_PARAGRAPH: (_, context): Transition => {
-      const { lines, line, lastPositioning } = context;
+    PREV_PARAGRAPH: (_, state): Transition => {
+      const { lines, line, lastPositioning } = state;
 
       if (Date.now() - lastPositioning < 150) {
-        return changePosition(context, {
+        return changePosition(state, {
           lines,
           line: 0,
           char: 0,
@@ -363,14 +361,14 @@ const reducer = createReducer<EditorContext, EditorEvent>({
 
       newLine = Math.max(newLine, 0);
 
-      return changePosition(context, {
+      return changePosition(state, {
         lines,
         line: newLine,
         char: 0,
       });
     },
   },
-});
+};
 
 export default function Editor({
   value = "",
@@ -393,13 +391,16 @@ export default function Editor({
 }) {
   const width = LINE_LENGTH * FONT_SIZE;
   const [canvas, ctx] = useCanvas(width, height);
-  const [context, send] = useReducer(reducer, {
-    state: "IDLE",
-    lines: value.split("\n"),
-    line: caret.line,
-    char: caret.char,
-    lastPositioning: Date.now(),
-  });
+  const [state, dispatch] = useStates<State, Action, Command>(
+    {
+      context: "IDLE",
+      lines: value.split("\n"),
+      line: caret.line,
+      char: caret.char,
+      lastPositioning: Date.now(),
+    },
+    transitions
+  );
 
   function drawLine(line: number, text: string) {
     ctx.clearRect(PADDING, line * LINE_HEIGHT, width, LINE_HEIGHT);
@@ -430,49 +431,49 @@ export default function Editor({
       ctx.fillStyle = "#EAEAEA";
       ctx.textBaseline = "bottom";
 
-      drawLines(context.lines, 0);
-      drawCaret(caret.line, caret.char, context.lines[caret.line]);
+      drawLines(state.lines, 0);
+      drawCaret(caret.line, caret.char, state.lines[caret.line]);
     }
   }, [ctx]);
 
-  useEnterEffect(context, "IDLE", () => {
+  useStateEffect(state, "IDLE", () => {
     const keydown = (event: KeyboardEvent) => {
       const key = event.code === "Equal" ? "`" : event.key;
 
       if (!event.metaKey && key.length === 1) {
         event.preventDefault();
-        send({
+        dispatch({
           type: "CHAR_INSERT",
           key: key,
         });
       } else if (key === "Backspace") {
         event.preventDefault();
-        send({
+        dispatch({
           type: "CHAR_REMOVE",
         });
       } else if (key === "Enter") {
         event.preventDefault();
-        send({
+        dispatch({
           type: "NEW_LINE",
         });
       } else if (key === "ArrowUp") {
         event.preventDefault();
-        send({
+        dispatch({
           type: event.metaKey ? "PREV_PARAGRAPH" : "PREV_LINE",
         });
       } else if (key === "ArrowDown") {
         event.preventDefault();
-        send({
+        dispatch({
           type: event.metaKey ? "NEXT_PARAGRAPH" : "NEXT_LINE",
         });
       } else if (key === "ArrowLeft") {
         event.preventDefault();
-        send({
+        dispatch({
           type: event.metaKey ? "PREV_WORD" : "PREV_CHAR",
         });
       } else if (key === "ArrowRight") {
         event.preventDefault();
-        send({
+        dispatch({
           type: event.metaKey ? "NEXT_WORD" : "NEXT_CHAR",
         });
       }
@@ -485,23 +486,23 @@ export default function Editor({
     };
   });
 
-  useTransientEffect(context, "$INSERTING", ({ line, lines, char }) => {
+  useCommandEffect(state, "INSERT", ({ line, lines, char }) => {
     drawLine(line, lines[line]);
     drawCaret(line, char, lines[line]);
     onCaretChange({ line, char });
     onChange(lines.join("\n"));
   });
 
-  useTransientEffect(context, "$REMOVING", ({ line, lines, char }) => {
+  useCommandEffect(state, "REMOVE", ({ line, lines, char }) => {
     drawLine(line, lines[line]);
     drawCaret(line, char, lines[line]);
     onCaretChange({ line, char });
     onChange(lines.join("\n"));
   });
 
-  useTransientEffect(
-    context,
-    "$CHANGING_POSITION",
+  useCommandEffect(
+    state,
+    "CHANGE_POSITION",
     ({ lines, prevLines, prevLine, line, char }) => {
       drawLines(lines, Math.min(prevLine, line));
       drawCaret(line, char, lines[line]);

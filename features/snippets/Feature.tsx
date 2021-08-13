@@ -1,89 +1,83 @@
-import { createContext, Dispatch, useContext, useReducer } from "react";
+import { Dispatch, useContext, useReducer } from "react";
 import {
-  Context,
-  ContextTransition,
+  createContext,
+  StateTransition,
   transition,
-  useEnterEffect,
-  useEvents,
-  useTransientEffect,
+  Transitions,
+  useCommandEffect,
+  useStates,
+  useSubsription,
 } from "react-states";
 import { useDevtools } from "react-states/devtools";
 import { useEnvironment } from "../../environments";
-import { ProjectEvent } from "../../environments/project";
+import { ProjectSubscription } from "../../environments/project";
 
-type FeatureContext = Context<
-  | {
-      state: "IDLE";
-      snippets: {
-        [path: string]: string;
-      };
-    }
-  | {
-      state: "$LOADING_SNIPPET";
-      path: string;
-    }
->;
+type State = {
+  context: "IDLE";
+  snippets: {
+    [path: string]: string;
+  };
+};
 
-type FeatureEvent = {
+type Command = {
+  cmd: "LOAD_SNIPPET";
+  path: string;
+};
+
+type Action = {
   type: "LOAD_SNIPPET";
   path: string;
 };
 
-type Transition = ContextTransition<FeatureContext>;
+type Transition = StateTransition<State, Command>;
 
-const featureContext = createContext<[FeatureContext, Dispatch<FeatureEvent>]>(
-  [] as any
-);
+const featureContext = createContext<State, Action>();
 
-const reducer = (context: FeatureContext, event: FeatureEvent | ProjectEvent) =>
-  transition(context, event, {
-    IDLE: {
-      "PROJECT:LOAD_SNIPPET_SUCCESS": (
-        { path, code },
-        context
-      ): Transition => ({
-        ...context,
-        snippets: {
-          ...context.snippets,
-          [path]: code,
-        },
-      }),
-      LOAD_SNIPPET: ({ path }, context): Transition => [
-        {
-          state: "$LOADING_SNIPPET",
-          path,
-        },
-        context,
-      ],
-    },
-  });
+const transitions: Transitions<State, Action | ProjectSubscription, Command> = {
+  IDLE: {
+    "PROJECT:LOAD_SNIPPET_SUCCESS": ({ path, code }, state): Transition => ({
+      ...state,
+      snippets: {
+        ...state.snippets,
+        [path]: code,
+      },
+    }),
+    LOAD_SNIPPET: ({ path }, state): Transition => [
+      state,
+      {
+        cmd: "LOAD_SNIPPET",
+        path,
+      },
+    ],
+  },
+};
 
 export const useFeature = () => useContext(featureContext);
 
 export const FeatureProvider = ({
   children,
   repoUrl,
-  initialContext = {
-    state: "IDLE",
+  initialState = {
+    context: "IDLE",
     snippets: {},
   },
 }: {
   children: React.ReactNode;
   repoUrl: string;
-  initialContext?: FeatureContext;
+  initialState?: State;
 }) => {
   const { project } = useEnvironment();
-  const feature = useReducer(reducer, initialContext);
+  const feature = useStates(initialState, transitions);
 
   if (process.browser && process.env.NODE_ENV === "development") {
     useDevtools("Snippets", feature);
   }
 
-  const [context, send] = feature;
+  const [state, dispatch] = feature;
 
-  useEvents(project.events, send);
+  useSubsription(project.subscription, dispatch);
 
-  useTransientEffect(context, "$LOADING_SNIPPET", ({ path }) => {
+  useCommandEffect(state, "LOAD_SNIPPET", ({ path }) => {
     project.loadSnippet(repoUrl, path);
   });
 

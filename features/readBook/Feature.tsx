@@ -1,126 +1,127 @@
-import { Context, ContextTransition } from "react-states";
-import { Excalidraw, Page } from "../../environments/project";
-import { useContext, useEffect, useReducer } from "react";
 import {
-  createContext,
-  createReducer,
-  useEnterEffect,
-  useEvents,
+  StateTransition,
+  Transitions,
+  useStateEffect,
+  useStates,
+  useSubsription,
 } from "react-states";
+import { Excalidraw, Page, Project } from "../../environments/project";
+import { useContext, useEffect, useReducer } from "react";
+import { createContext } from "react-states";
 import { useDevtools } from "react-states/devtools";
-import { ProjectEvent } from "../../environments/project";
+import { ProjectSubscription } from "../../environments/project";
 import { useEnvironment } from "../../environments";
 
 export type { Excalidraw, Page };
 
-export type MenuContext =
+export type MenuState =
   | {
-      state: "IDLE";
+      context: "IDLE";
     }
   | {
-      state: "TOC";
+      context: "TOC";
     };
 
-type BaseContext = {
+type BaseState = {
   pageIndex: number;
   pages: Page[];
   excalidraws: {
     [id: string]: Excalidraw;
   };
-  menu: MenuContext;
+  menu: MenuState;
 };
 
-export type FeatureContext = Context<
-  | BaseContext &
-      (
-        | {
-            state: "LOADING_PROJECT";
-          }
-        | {
-            state: "READY";
-            commitSha: string;
-          }
-      )
->;
+export type State = BaseState &
+  (
+    | {
+        context: "LOADING_PROJECT";
+      }
+    | {
+        context: "READY";
+        commitSha: string;
+      }
+  );
 
-export type FeatureEvent = {
+export type Action = {
   type: "TOGGLE_TOC";
 };
 
-export type PrivateEvent = {
+export type PrivateAction = {
   type: "CHANGE_PAGE";
   index: number;
 };
 
-export type Transition = ContextTransition<FeatureContext>;
+export type Transition = StateTransition<State>;
 
-const featureContext = createContext<FeatureContext, FeatureEvent>();
+const featureContext = createContext<State, Action>();
 
-const reducer = createReducer<
-  FeatureContext,
-  FeatureEvent | PrivateEvent | ProjectEvent
->({
+const transitions: Transitions<
+  State,
+  Action | PrivateAction | ProjectSubscription
+> = {
   LOADING_PROJECT: {
     "PROJECT:LOAD_SUCCESS": (
       { excalidraws, pages, commitSha },
-      context
+      state
     ): Transition => ({
-      ...context,
-      state: "READY",
+      ...state,
+      context: "READY",
       excalidraws,
       pages,
       commitSha,
     }),
   },
   READY: {
-    TOGGLE_TOC: (_, context): Transition => ({
-      ...context,
+    TOGGLE_TOC: (_, state): Transition => ({
+      ...state,
       menu: {
-        state: context.menu.state === "TOC" ? "IDLE" : "TOC",
+        context: state.menu.context === "TOC" ? "IDLE" : "TOC",
       },
     }),
   },
-});
+};
 
 export const useFeature = () => useContext(featureContext);
 
 export const FeatureProvider = ({
   children,
   repoUrl,
+  branch,
   page,
-  initialContext = {
-    state: "LOADING_PROJECT",
+  initialState = {
+    context: "LOADING_PROJECT",
     pages: [],
     excalidraws: {},
     pageIndex: page,
-    menu: { state: "IDLE" },
+    menu: { context: "IDLE" },
   },
 }: {
   children: React.ReactNode;
+  branch: string;
   page: number;
   repoUrl: string;
-  initialContext?: FeatureContext;
+  initialState?: State;
 }) => {
   const { project } = useEnvironment();
-  const feature = useReducer(reducer, initialContext);
+  const feature = useStates(initialState, transitions);
 
   if (process.browser && process.env.NODE_ENV === "development") {
     useDevtools("Project", feature);
   }
 
-  const [context, send] = feature;
+  const [state, dispatch] = feature;
 
-  useEvents(project.events, send);
+  useSubsription(project.subscription, dispatch);
 
   useEffect(() => {
-    send({
+    dispatch({
       type: "CHANGE_PAGE",
       index: Number(page),
     });
   }, [page]);
 
-  useEnterEffect(context, "LOADING_PROJECT", () => {
-    project.load(repoUrl);
+  useStateEffect(state, "LOADING_PROJECT", () => {
+    project.load(repoUrl, branch);
   });
 
   return (

@@ -1,27 +1,27 @@
 import { signIn, signOut, getSession } from "next-auth/client";
-import { events } from "react-states";
+import { subscription } from "react-states";
 import { Auth } from ".";
 
 export const createAuth = (): Auth => {
   return {
-    events: events(),
+    subscription: subscription(),
     authenticate() {
       getSession()
         .then((session) => {
           if (session) {
-            this.events.emit({
+            this.subscription.emit({
               type: "AUTH:AUTHENTICATE_SUCCESS",
               accessToken: session.accessToken as string,
             });
           } else {
-            this.events.emit({
+            this.subscription.emit({
               type: "AUTH:AUTHENTICATE_ERROR",
               error: "Not signed in",
             });
           }
         })
         .catch((error) => {
-          this.events.emit({
+          this.subscription.emit({
             type: "AUTH:AUTHENTICATE_ERROR",
             error: error.message,
           });
@@ -32,19 +32,19 @@ export const createAuth = (): Auth => {
         .then(() => getSession())
         .then((session) => {
           if (session) {
-            this.events.emit({
+            this.subscription.emit({
               type: "AUTH:SIGN_IN_SUCCESS",
               accessToken: session.accessToken as string,
             });
           } else {
-            this.events.emit({
+            this.subscription.emit({
               type: "AUTH:SIGN_IN_ERROR",
               error: "No session",
             });
           }
         })
         .catch((error) => {
-          this.events.emit({
+          this.subscription.emit({
             type: "AUTH:SIGN_IN_ERROR",
             error: error.message,
           });
@@ -53,12 +53,12 @@ export const createAuth = (): Auth => {
     signOut() {
       signOut()
         .then(() => {
-          this.events.emit({
+          this.subscription.emit({
             type: "AUTH:SIGN_OUT_SUCCESS",
           });
         })
         .catch((error) => {
-          this.events.emit({
+          this.subscription.emit({
             type: "AUTH:SIGN_OUT_ERROR",
             error: error.message,
           });
