@@ -67,7 +67,7 @@ export const FeatureProvider = ({
   initialState?: State;
 }) => {
   const { project } = useEnvironment();
-  const feature = useStates(initialState, transitions);
+  const feature = useStates(transitions, initialState);
 
   if (process.browser && process.env.NODE_ENV === "development") {
     useDevtools("Snippets", feature);

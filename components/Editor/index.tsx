@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from "react";
+import { useEffect } from "react";
 import {
   StateTransition,
   Transitions,
@@ -391,16 +391,13 @@ export default function Editor({
 }) {
   const width = LINE_LENGTH * FONT_SIZE;
   const [canvas, ctx] = useCanvas(width, height);
-  const [state, dispatch] = useStates<State, Action, Command>(
-    {
-      context: "IDLE",
-      lines: value.split("\n"),
-      line: caret.line,
-      char: caret.char,
-      lastPositioning: Date.now(),
-    },
-    transitions
-  );
+  const [state, dispatch] = useStates(transitions, {
+    context: "IDLE",
+    lines: value.split("\n"),
+    line: caret.line,
+    char: caret.char,
+    lastPositioning: Date.now(),
+  });
 
   function drawLine(line: number, text: string) {
     ctx.clearRect(PADDING, line * LINE_HEIGHT, width, LINE_HEIGHT);

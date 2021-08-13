@@ -73,7 +73,7 @@ export const FeatureProvider = ({
   initialState?: State;
 }) => {
   const { auth } = useEnvironment();
-  const feature = useStates(initialState, transitions);
+  const feature = useStates(transitions, initialState);
 
   if (process.browser && process.env.NODE_ENV === "development") {
     useDevtools("Session", feature);

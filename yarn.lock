@@ -4673,10 +4673,10 @@ react-refresh@0.8.3:
   resolved "https://registry.yarnpkg.com/react-refresh/-/react-refresh-0.8.3.tgz#721d4657672d400c5e3c75d063c4a85fb2d5d68f"
   integrity sha512-X8jZHc7nCMjaCqoU+V2I0cOhNW+QMBwSUkeXnTi8IPe6zaRWfn60ZzvFDZqWPfmSJfjub7dDW1SP0jaHWLu/hg==
 
-react-states@^7.1.2-next:
-  version "7.1.2-next"
-  resolved "https://registry.yarnpkg.com/react-states/-/react-states-7.1.2-next.tgz#b5b7a877cbf0cd079b0ee724a363dd4f0a8ab3ec"
-  integrity sha512-fgSvNwhmtHk7iPuk0ZXUHdhtOQj+3PSMt5qbYR4SUBVC5jCsyZ1XzFubjxrL0dgn1DhAmuBl2B25Yby/wH6J4g==
+react-states@^7.1.4-next:
+  version "7.1.4-next"
+  resolved "https://registry.yarnpkg.com/react-states/-/react-states-7.1.4-next.tgz#63c8b678da2bde134b7c76a85771628a41bdb934"
+  integrity sha512-H9SuyIr+FNy03AUInVrgXWe8TCe6VF2GL569XNeZTjGIDMvLgQBu5HEHA0sqFQt9fZe7c8ejorEXLmtdO/Qd9A==
 
 react-syntax-highlighter@^15.4.4:
   version "15.4.4"
