@@ -54,6 +54,9 @@ type Action =
       type: "CHAR_REMOVE";
     }
   | {
+      type: "WORD_REMOVE";
+    }
+  | {
       type: "NEW_LINE";
     }
   | {
@@ -179,6 +182,49 @@ const transitions: Transitions<State, Action, Command> = {
         ...lines.slice(line + 1),
       ];
       const newChar = char - 1;
+
+      return [
+        {
+          ...state,
+          lines: newLines,
+          char: newChar,
+        },
+        {
+          cmd: "REMOVE",
+          line,
+          lines: newLines,
+          char: newChar,
+        },
+      ];
+    },
+    WORD_REMOVE: (_, state) => {
+      const { lines, line, char } = state;
+
+      if (char === 0 && line === 0) {
+        return state;
+      }
+
+      if (char === 0) {
+        return changePosition(state, {
+          line: line - 1,
+          char: lines[line - 1].length,
+          lines: [...lines.slice(0, line), ...lines.slice(line + 1)],
+        });
+      }
+
+      let newChar = char;
+
+      for (newChar; newChar > 0; newChar--) {
+        if (lines[line][newChar] === " ") {
+          break;
+        }
+      }
+
+      const newLines = [
+        ...lines.slice(0, line),
+        lines[line].slice(0, char + (newChar - char)) + lines[line].slice(char),
+        ...lines.slice(line + 1),
+      ];
 
       return [
         {
@@ -446,7 +492,7 @@ export default function Editor({
       } else if (key === "Backspace") {
         event.preventDefault();
         dispatch({
-          type: "CHAR_REMOVE",
+          type: event.metaKey ? "WORD_REMOVE" : "CHAR_REMOVE",
         });
       } else if (key === "Enter") {
         event.preventDefault();
