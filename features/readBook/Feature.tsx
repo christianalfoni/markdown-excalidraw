@@ -5,8 +5,8 @@ import {
   useStates,
   useSubsription,
 } from "react-states";
-import { Excalidraw, Page, Project } from "../../environments/project";
-import { useContext, useEffect, useReducer } from "react";
+import { Excalidraw, Page } from "../../environments/project";
+import { useContext, useEffect } from "react";
 import { createContext } from "react-states";
 import { useDevtools } from "react-states/devtools";
 import { ProjectSubscription } from "../../environments/project";
@@ -16,10 +16,10 @@ export type { Excalidraw, Page };
 
 export type MenuState =
   | {
-      context: "IDLE";
+      state: "IDLE";
     }
   | {
-      context: "TOC";
+      state: "TOC";
     };
 
 type BaseState = {
@@ -34,10 +34,10 @@ type BaseState = {
 export type State = BaseState &
   (
     | {
-        context: "LOADING_PROJECT";
+        state: "LOADING_PROJECT";
       }
     | {
-        context: "READY";
+        state: "READY";
         commitSha: string;
       }
   );
@@ -61,21 +61,21 @@ const transitions: Transitions<
 > = {
   LOADING_PROJECT: {
     "PROJECT:LOAD_SUCCESS": (
-      { excalidraws, pages, commitSha },
-      state
+      state,
+      { excalidraws, pages, commitSha }
     ): Transition => ({
       ...state,
-      context: "READY",
+      state: "READY",
       excalidraws,
       pages,
       commitSha,
     }),
   },
   READY: {
-    TOGGLE_TOC: (_, state): Transition => ({
+    TOGGLE_TOC: (state): Transition => ({
       ...state,
       menu: {
-        context: state.menu.context === "TOC" ? "IDLE" : "TOC",
+        state: state.menu.state === "TOC" ? "IDLE" : "TOC",
       },
     }),
   },
@@ -89,11 +89,11 @@ export const FeatureProvider = ({
   branch,
   page,
   initialState = {
-    context: "LOADING_PROJECT",
+    state: "LOADING_PROJECT",
     pages: [],
     excalidraws: {},
     pageIndex: page,
-    menu: { context: "IDLE" },
+    menu: { state: "IDLE" },
   },
 }: {
   children: React.ReactNode;

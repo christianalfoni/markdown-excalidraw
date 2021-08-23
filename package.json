@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@codesandbox/sandpack-react": "^0.1.9",
     "@excalidraw/excalidraw": "^0.9.0",
     "@heroicons/react": "^1.0.3",
     "@isomorphic-git/lightning-fs": "^4.4.1",
@@ -22,7 +23,7 @@
     "next-pwa": "^5.2.24",
     "react": "17.0.2",
     "react-dom": "17.0.2",
-    "react-states": "^7.1.4-next",
+    "react-states": "^7.4.1-next",
     "react-syntax-highlighter": "^15.4.4"
   },
   "devDependencies": {

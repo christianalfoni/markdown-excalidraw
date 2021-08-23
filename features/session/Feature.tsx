@@ -13,16 +13,16 @@ import { AuthSubscription } from "../../environments/auth";
 
 type State =
   | {
-      context: "AUTHENTICATING";
+      state: "AUTHENTICATING";
     }
   | {
-      context: "SIGNED_OUT";
+      state: "SIGNED_OUT";
     }
   | {
-      context: "SIGNING_IN";
+      state: "SIGNING_IN";
     }
   | {
-      context: "SIGNED_IN";
+      state: "SIGNED_IN";
       accessToken: string;
     };
 
@@ -36,27 +36,27 @@ const featureContext = createContext<State, Action>();
 
 const transitions: Transitions<State, Action | AuthSubscription> = {
   AUTHENTICATING: {
-    "AUTH:AUTHENTICATE_SUCCESS": ({ accessToken }): Transition => ({
-      context: "SIGNED_IN",
+    "AUTH:AUTHENTICATE_SUCCESS": (_, { accessToken }): Transition => ({
+      state: "SIGNED_IN",
       accessToken,
     }),
     "AUTH:AUTHENTICATE_ERROR": (): Transition => ({
-      context: "SIGNED_OUT",
+      state: "SIGNED_OUT",
     }),
   },
   SIGNED_IN: {},
   SIGNED_OUT: {
     SIGN_IN: (): Transition => ({
-      context: "SIGNING_IN",
+      state: "SIGNING_IN",
     }),
   },
   SIGNING_IN: {
-    "AUTH:AUTHENTICATE_SUCCESS": ({ accessToken }): Transition => ({
-      context: "SIGNED_IN",
+    "AUTH:AUTHENTICATE_SUCCESS": (_, { accessToken }): Transition => ({
+      state: "SIGNED_IN",
       accessToken,
     }),
     "AUTH:AUTHENTICATE_ERROR": (): Transition => ({
-      context: "SIGNED_OUT",
+      state: "SIGNED_OUT",
     }),
   },
 };
@@ -66,7 +66,7 @@ export const useFeature = () => useContext(featureContext);
 export const FeatureProvider = ({
   children,
   initialState = {
-    context: "AUTHENTICATING",
+    state: "AUTHENTICATING",
   },
 }: {
   children: React.ReactNode;

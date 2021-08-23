@@ -25,13 +25,13 @@ export const EditPage = ({
 
   return (
     <div
-      className="py-6 h-full outline-none font-mono text-md flex mx-auto items-center  bg-transparent overflow-hidden"
+      className="h-full outline-none font-mono text-md flex mx-auto items-center  bg-transparent overflow-hidden"
       style={{ width: "800px" }}
     >
       <Editor
         value={value}
         height={700}
-        caret={caretPosition}
+        position={caretPosition}
         onChange={update}
         onCaretChange={updateCaretPosition}
       />

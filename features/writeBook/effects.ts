@@ -10,24 +10,24 @@ export const useKeyboardShortcuts = ([state, send]: [
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Tab") {
         event.preventDefault();
-        if (state.mode.context === "EDITING") {
+        if (state.mode.state === "EDITING") {
           send({
             type: "CHANGE_MODE",
-            mode: { context: "READING" },
+            mode: { state: "READING" },
           });
-        } else if (state.mode.context === "READING") {
+        } else if (state.mode.state === "READING") {
           send({
             type: "CHANGE_MODE",
-            mode: { context: "EDITING" },
+            mode: { state: "EDITING" },
           });
         }
       }
 
       if (event.metaKey && event.key === "e") {
-        if (state.mode.context === "DRAWING") {
+        if (state.mode.state === "DRAWING") {
           send({
             type: "CHANGE_MODE",
-            mode: { context: "EDITING" },
+            mode: { state: "READING" },
           });
         } else {
           send({

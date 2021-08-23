@@ -13,7 +13,7 @@ import { useEnvironment } from "../../environments";
 import { ProjectSubscription } from "../../environments/project";
 
 type State = {
-  context: "IDLE";
+  state: "IDLE";
   snippets: {
     [path: string]: string;
   };
@@ -35,14 +35,14 @@ const featureContext = createContext<State, Action>();
 
 const transitions: Transitions<State, Action | ProjectSubscription, Command> = {
   IDLE: {
-    "PROJECT:LOAD_SNIPPET_SUCCESS": ({ path, code }, state): Transition => ({
+    "PROJECT:LOAD_SNIPPET_SUCCESS": (state, { path, code }): Transition => ({
       ...state,
       snippets: {
         ...state.snippets,
         [path]: code,
       },
     }),
-    LOAD_SNIPPET: ({ path }, state): Transition => [
+    LOAD_SNIPPET: (state, { path }): Transition => [
       state,
       {
         cmd: "LOAD_SNIPPET",
@@ -58,7 +58,7 @@ export const FeatureProvider = ({
   children,
   repoUrl,
   initialState = {
-    context: "IDLE",
+    state: "IDLE",
     snippets: {},
   },
 }: {

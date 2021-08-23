@@ -55,7 +55,7 @@ export const ReadBook = () => {
             className="w-6 h-6 text-gray-100 absolute top-4 right-4"
           />
           <div className="mx-auto flex items-center">
-            <Pages pages={pages} />
+            <Pages pages={pages} excalidraws={book.excalidraws} />
           </div>
         </div>
       </ExcalidrawsProvider>

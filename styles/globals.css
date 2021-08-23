@@ -42,7 +42,6 @@ body {
 }
 
 .book__page--1 {
-  cursor: pointer;
   overflow: hidden;
 }
 
@@ -50,10 +49,6 @@ body {
   position: absolute;
   right: 0;
   transform-style: preserve-3d;
-}
-
-.book__page--4 {
-  cursor: pointer;
 }
 
 .book__page-front {

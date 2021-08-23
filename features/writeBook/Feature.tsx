@@ -1,4 +1,4 @@
-import { useContext, useEffect, useReducer, useState } from "react";
+import { useContext, useEffect } from "react";
 import {
   createContext,
   Transitions,
@@ -22,11 +22,11 @@ const transitions: Transitions<
 > = {
   LOADING_PROJECT: {
     "PROJECT:LOAD_SUCCESS": (
-      { excalidraws, pages, commitSha, changes },
-      state
+      state,
+      { excalidraws, pages, commitSha, changes }
     ): Transition => ({
       ...state,
-      context: "READY",
+      state: "READY",
       excalidraws,
       pages,
       commitSha,
@@ -34,11 +34,11 @@ const transitions: Transitions<
     }),
   },
   READY: {
-    "PROJECT:PAGES_UPDATE": ({ pages }, state): Transition => ({
+    "PROJECT:PAGES_UPDATE": (state, { pages }): Transition => ({
       ...state,
       pages,
     }),
-    UPDATE_PAGE: ({ content }, state): Transition => [
+    UPDATE_PAGE: (state, { content }): Transition => [
       state,
       {
         cmd: "UPDATE_PAGE",
@@ -46,15 +46,15 @@ const transitions: Transitions<
         pageIndex: state.pageIndex,
       },
     ],
-    CHANGE_MODE: ({ mode }, state): Transition => ({
+    CHANGE_MODE: (state, { mode }): Transition => ({
       ...state,
       mode,
     }),
-    CHANGE_CARET_POSITION: ({ position }, state): Transition => ({
+    CHANGE_CARET_POSITION: (state, { position }): Transition => ({
       ...state,
       caretPosition: position,
     }),
-    UPDATE_EXCALIDRAW: ({ excalidraw, id }, state): Transition => [
+    UPDATE_EXCALIDRAW: (state, { excalidraw, id }): Transition => [
       state,
       {
         cmd: "UPDATE_EXCALIDRAW",
@@ -62,60 +62,61 @@ const transitions: Transitions<
         excalidraw,
       },
     ],
-    TOGGLE_TOC: (_, state): Transition => ({
+    TOGGLE_TOC: (state): Transition => ({
       ...state,
       menu: {
-        context: state.menu.context === "TOC" ? "IDLE" : "TOC",
+        state: state.menu.state === "TOC" ? "IDLE" : "TOC",
       },
     }),
-    TOGGLE_GIT: (_, state): Transition => ({
+    TOGGLE_GIT: (state): Transition => ({
       ...state,
       menu: {
-        context: state.menu.context === "GIT" ? "IDLE" : "GIT",
+        state: state.menu.state === "GIT" ? "IDLE" : "GIT",
       },
     }),
-    "PROJECT:GIT_UPDATE": ({ changes }, context): Transition => ({
-      ...context,
+    "PROJECT:GIT_UPDATE": (state, { changes }): Transition => ({
+      ...state,
       changes,
     }),
-    INSERT_EXCALIDRAW: (_, state): Transition => {
+    INSERT_EXCALIDRAW: (state): Transition => {
       const { pages, pageIndex, caretPosition } = state;
-      const content = pages[pageIndex].content.split("\n");
-      const firstLines = content.slice(0, caretPosition.line + 1);
-      const lastLines = content.slice(caretPosition.line);
-      const line = firstLines.pop() || "";
+      const content = pages[pageIndex].content;
 
-      if (line.length === 0) {
+      if (
+        caretPosition.char === 0 &&
+        content[caretPosition.absolute] === "\n"
+      ) {
         const id = String(Date.now());
-        const inserted = `<Excalidraw id="${id}" />`;
 
         return [
           {
             ...state,
-            caretPosition: {
-              line: caretPosition.line,
-              char: caretPosition.char + inserted.length,
-            },
             mode: {
-              context: "DRAWING" as const,
+              state: "DRAWING",
               id,
             },
           },
           {
             cmd: "INSERT_EXCALIDRAW",
-            content: [...firstLines, inserted, ...lastLines].join("\n"),
+            content:
+              content.slice(0, caretPosition.absolute) +
+              `<Excalidraw id="${id}" />\n` +
+              content.slice(caretPosition.absolute),
             id,
             pageIndex,
           },
         ];
       }
-      const excalidrawRef = line.match(/<Excalidraw id="(.*)" \/>/);
+
+      let excalidrawRef = content
+        .slice(caretPosition.absolute)
+        .match(/<Excalidraw id="(.*)" \/>/);
 
       if (excalidrawRef) {
         return {
           ...state,
           mode: {
-            context: "DRAWING",
+            state: "DRAWING",
             id: excalidrawRef[1],
           },
         };
@@ -123,30 +124,31 @@ const transitions: Transitions<
 
       return state;
     },
-    ADD_PAGE: (_, state): Transition => [
+    ADD_PAGE: (state): Transition => [
       state,
       {
         cmd: "ADD_PAGE",
         pageIndex: state.pageIndex,
       },
     ],
-    CHANGE_PAGE: ({ index }, state): Transition => ({
+    CHANGE_PAGE: (state, { index }): Transition => ({
       ...state,
       pageIndex: index,
       caretPosition: {
         line: 0,
         char: 0,
+        absolute: 0,
       },
     }),
-    SAVE: (_, state): Transition => ({
+    SAVE: (state): Transition => ({
       ...state,
-      context: "SAVING",
+      state: "SAVING",
     }),
   },
   SAVING: {
-    "PROJECT:SAVE_SUCCESS": ({ commitSha, changes }, state): Transition => ({
+    "PROJECT:SAVE_SUCCESS": (state, { commitSha, changes }): Transition => ({
       ...state,
-      context: "READY",
+      state: "READY",
       commitSha,
       changes,
     }),
@@ -162,15 +164,16 @@ export const FeatureProvider = ({
   accessToken,
   page,
   initialState = {
-    context: "LOADING_PROJECT",
+    state: "LOADING_PROJECT",
     pages: [],
     excalidraws: {},
     pageIndex: page,
-    mode: { context: "READING" },
-    menu: { context: "IDLE" },
+    mode: { state: "READING" },
+    menu: { state: "IDLE" },
     caretPosition: {
       line: 0,
       char: 0,
+      absolute: 0,
     },
   },
 }: {

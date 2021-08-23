@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   StateTransition,
   Transitions,
@@ -13,36 +13,35 @@ const LINE_HEIGHT = 30;
 const PADDING = 10;
 const LINE_LENGTH = 75;
 const FONT_SIZE = 16;
+const DOUBLE_DEBOUNCE = 175;
+
+export type Position = {
+  char: number;
+  line: number;
+  absolute: number;
+};
 
 type State = {
-  context: "IDLE";
+  state: "IDLE";
+  content: string;
   lines: string[];
-  line: number;
-  char: number;
+  lineCount: number;
+  drawFromLine: number;
+  position: Position;
   lastPositioning: number;
 };
 
 type Command =
   | {
-      cmd: "INSERT";
-      key: string;
-      line: number;
+      cmd: "UPDATE";
+      content: string;
       lines: string[];
-      char: number;
-    }
-  | {
-      cmd: "REMOVE";
-      line: number;
-      lines: string[];
-      char: number;
+      position: Position;
     }
   | {
       cmd: "CHANGE_POSITION";
       lines: string[];
-      prevLines: string[];
-      prevLine: number;
-      line: number;
-      char: number;
+      position: Position;
     };
 
 type Action =
@@ -86,6 +85,7 @@ type Action =
 
 type Transition = StateTransition<State, Command>;
 
+/*
 const changePosition = (
   state: State,
   {
@@ -116,311 +116,500 @@ const changePosition = (
     },
   ];
 };
+*/
+
+function getLines(text: string) {
+  return text
+    .split("\n")
+    .map((para) => {
+      var words = para.split(" ");
+      var lines = [];
+      var currentLine = words[0];
+
+      for (var i = 1; i < words.length; i++) {
+        var word = words[i];
+        var width = (currentLine + " " + word).length;
+        if (width < LINE_LENGTH) {
+          currentLine += " " + word;
+        } else {
+          lines.push(currentLine);
+          currentLine = word;
+        }
+      }
+      lines.push(currentLine);
+      return lines;
+    })
+    .reduce((a, b) => a.concat(b), []);
+}
+
+function getPositionByAbsolute(lines: string[], absolute: number) {
+  let char = absolute;
+
+  for (let x = 0; x < lines.length; x++) {
+    if (char <= lines[x].length) {
+      return {
+        line: x,
+        char,
+        absolute,
+      };
+    }
+    char -= lines[x].length + 1;
+  }
+
+  return {
+    line: 0,
+    char,
+    absolute,
+  };
+}
+
+function getAbsolutePosition(
+  lines: string[],
+  { line, char }: { line: number; char: number }
+) {
+  let newChar = 0;
+
+  for (let x = 0; x < lines.length; x++) {
+    if (x === line) {
+      return newChar + char;
+    }
+
+    newChar += lines[x].length + 1;
+  }
+
+  return newChar + char;
+}
+
+function getDrawLine(current: number, lineCount: number, line: number) {
+  if (line === current + lineCount - 1) {
+    return current + 1;
+  }
+
+  if (line === current && current > 0) {
+    return current - 1;
+  }
+
+  if (line < current || line > lineCount) {
+    return Math.max(0, line - 10);
+  }
+
+  return current;
+}
 
 const transitions: Transitions<State, Action, Command> = {
   IDLE: {
-    CHAR_INSERT: ({ key }, state): Transition => {
-      const { lines, line, char } = state;
-
-      if (lines[line].length === LINE_LENGTH) {
-        const currentWords = lines[line].split(" ");
-        const lastWord = currentWords.pop() || "";
-
-        return changePosition(state, {
-          char: lastWord.length + 1,
-          line: line + 1,
-          lines: [
-            ...lines.slice(0, line),
-            currentWords.join(" "),
-            lastWord + key,
-            ...lines.slice(line + 1),
-          ],
-        });
-      }
-
-      const newLines = [
-        ...lines.slice(0, line),
-        lines[line].slice(0, char) + key + lines[line].slice(char),
-        ...lines.slice(line + 1),
-      ];
-      const newChar = char + 1;
+    CHAR_INSERT: (state, { key }): Transition => {
+      const content =
+        state.content.slice(0, state.position.absolute) +
+        key +
+        state.content.slice(state.position.absolute);
+      const char = state.position.absolute + 1;
+      const lines = getLines(content);
+      const position = getPositionByAbsolute(lines, char);
 
       return [
         {
           ...state,
-          lines: newLines,
-          char: newChar,
+          content,
+          lines,
+          position,
+          drawFromLine: getDrawLine(
+            state.drawFromLine,
+            state.lineCount,
+            position.line
+          ),
         },
         {
-          cmd: "INSERT",
-          key,
-          line,
-          lines: newLines,
-          char: newChar,
+          cmd: "UPDATE",
+          content,
+          position,
+          lines,
         },
       ];
     },
-
-    CHAR_REMOVE: (_, state): Transition => {
-      const { lines, line, char } = state;
-
-      if (char === 0 && line === 0) {
-        return state;
-      }
-
-      if (char === 0) {
-        return changePosition(state, {
-          line: line - 1,
-          char: lines[line - 1].length,
-          lines: [...lines.slice(0, line), ...lines.slice(line + 1)],
-        });
-      }
-
-      const newLines = [
-        ...lines.slice(0, line),
-        lines[line].slice(0, char - 1) + lines[line].slice(char),
-        ...lines.slice(line + 1),
-      ];
-      const newChar = char - 1;
+    CHAR_REMOVE: (state): Transition => {
+      const content =
+        state.content.slice(0, state.position.absolute - 1) +
+        state.content.slice(state.position.absolute);
+      const char = state.position.absolute - 1;
+      const lines = getLines(content);
+      const position = getPositionByAbsolute(lines, char);
 
       return [
         {
           ...state,
-          lines: newLines,
-          char: newChar,
+          content,
+          lines,
+          position,
+          drawFromLine: getDrawLine(
+            state.drawFromLine,
+            state.lineCount,
+            position.line
+          ),
         },
         {
-          cmd: "REMOVE",
-          line,
-          lines: newLines,
-          char: newChar,
+          cmd: "UPDATE",
+          content,
+          position,
+          lines,
         },
       ];
     },
-    WORD_REMOVE: (_, state) => {
-      const { lines, line, char } = state;
-
-      if (char === 0 && line === 0) {
+    WORD_REMOVE: (state) => {
+      if (
+        state.content[state.position.absolute] !== " " &&
+        state.content[state.position.absolute] !== "\n"
+      ) {
         return state;
       }
 
-      if (char === 0) {
-        return changePosition(state, {
-          line: line - 1,
-          char: lines[line - 1].length,
-          lines: [...lines.slice(0, line), ...lines.slice(line + 1)],
-        });
-      }
+      const endChar = state.position.absolute;
+      let char = endChar - 1;
 
-      let newChar = char;
-
-      for (newChar; newChar > 0; newChar--) {
-        if (lines[line][newChar] === " ") {
+      for (char; char > 0; char--) {
+        if (state.content[char] === " " || state.content[char] === "\n") {
           break;
         }
       }
 
-      const newLines = [
-        ...lines.slice(0, line),
-        lines[line].slice(0, char + (newChar - char)) + lines[line].slice(char),
-        ...lines.slice(line + 1),
-      ];
+      const content =
+        state.content.slice(0, char) + state.content.slice(endChar);
+      const lines = getLines(content);
+      const position = getPositionByAbsolute(lines, char);
 
       return [
         {
           ...state,
-          lines: newLines,
-          char: newChar,
+          content,
+          position,
+          char,
+          lines,
+          drawFromLine: getDrawLine(
+            state.drawFromLine,
+            state.lineCount,
+            position.line
+          ),
         },
         {
-          cmd: "REMOVE",
-          line,
-          lines: newLines,
-          char: newChar,
+          cmd: "UPDATE",
+          content,
+          position,
+          lines,
         },
       ];
     },
-    NEW_LINE: (_, state): Transition => {
-      const { line, lines } = state;
 
-      return changePosition(state, {
-        line: line + 1,
-        char: 0,
-        lines: [...lines.slice(0, line + 1), "", ...lines.slice(line + 1)],
-      });
-    },
-    NEXT_LINE: (_, state): Transition => {
-      if (state.line + 1 >= state.lines.length) {
-        return state;
-      }
+    NEW_LINE: (state): Transition => {
+      const content =
+        state.content.slice(0, state.position.absolute) +
+        "\n" +
+        state.content.slice(state.position.absolute);
+      const char = state.position.absolute + 1;
+      const lines = getLines(content);
+      const position = getPositionByAbsolute(lines, char);
 
-      return changePosition(state, {
-        line: state.line + 1,
-        char: Math.min(state.lines[state.line + 1].length, state.char),
-        lines: state.lines,
-      });
-    },
-    PREV_LINE: (_, state): Transition => {
-      if (state.line - 1 < 0) {
-        return state;
-      }
-
-      return changePosition(state, {
-        line: state.line - 1,
-        char: Math.min(state.lines[state.line - 1].length, state.char),
-        lines: state.lines,
-      });
-    },
-    NEXT_CHAR: (_, state): Transition => {
-      const { char, lines, line } = state;
-      if (char < lines[line].length) {
-        return changePosition(state, {
-          line: state.line,
-          char: char + 1,
-          lines: state.lines,
-        });
-      } else if (line + 1 < lines.length) {
-        return changePosition(state, {
-          line: line + 1,
-          char: 0,
-          lines: state.lines,
-        });
-      }
-
-      return state;
-    },
-    PREV_CHAR: (_, state): Transition => {
-      const { char, lines, line } = state;
-      if (char > 0) {
-        return changePosition(state, {
-          line,
-          char: char - 1,
+      return [
+        {
+          ...state,
+          content,
           lines,
-        });
-      } else if (line > 0) {
-        return changePosition(state, {
-          line: line - 1,
-          char: lines[line - 1].length,
+          position,
+          drawFromLine: getDrawLine(
+            state.drawFromLine,
+            state.lineCount,
+            position.line
+          ),
+        },
+        {
+          cmd: "UPDATE",
+          content,
+          position,
           lines,
-        });
-      }
-
-      return state;
+        },
+      ];
     },
-    PREV_WORD: (_, state): Transition => {
-      const { lines, char, line, lastPositioning } = state;
 
-      if (Date.now() - lastPositioning < 150) {
-        return changePosition(state, {
-          lines,
-          line,
-          char: 0,
-        });
-      }
-
-      let newChar = char - 2;
-
-      for (newChar; newChar > 0; newChar--) {
-        if (lines[line][newChar + 1] === " ") {
-          newChar++;
-          break;
-        }
-      }
-
-      return changePosition(state, {
-        lines,
+    NEXT_LINE: (state): Transition => {
+      const line = Math.min(state.position.line + 1, state.lines.length - 1);
+      const char = getAbsolutePosition(state.lines, {
+        char: Math.min(state.lines[line].length, state.position.char),
         line,
-        char: Math.max(newChar, 0),
       });
+      const position = getPositionByAbsolute(state.lines, char);
+
+      return [
+        {
+          ...state,
+          position,
+          lastPositioning: Date.now(),
+          drawFromLine: getDrawLine(
+            state.drawFromLine,
+            state.lineCount,
+            position.line
+          ),
+        },
+        {
+          cmd: "CHANGE_POSITION",
+          lines: state.lines,
+          position,
+        },
+      ];
     },
-    NEXT_WORD: (_, state): Transition => {
-      const { char, lines, line, lastPositioning } = state;
-
-      if (Date.now() - lastPositioning < 150) {
-        return changePosition(state, {
-          lines,
-          line,
-          char: lines[line].length,
-        });
-      }
-
-      let newChar = char + 1;
-
-      for (newChar; newChar < lines[line].length; newChar++) {
-        if (lines[line][newChar] === " ") {
-          break;
-        }
-      }
-
-      return changePosition(state, {
-        lines,
+    PREV_LINE: (state): Transition => {
+      const line = Math.max(state.position.line - 1, 0);
+      const char = getAbsolutePosition(state.lines, {
+        char: Math.min(state.lines[line].length, state.position.char),
         line,
-        char: Math.min(newChar, lines[line].length),
       });
-    },
-    NEXT_PARAGRAPH: (_, state): Transition => {
-      const { line, lines, lastPositioning } = state;
+      const position = getPositionByAbsolute(state.lines, char);
 
-      if (Date.now() - lastPositioning < 150) {
-        return changePosition(state, {
-          lines,
-          line: lines.length - 1,
+      return [
+        {
+          ...state,
+          position,
+          lastPositioning: Date.now(),
+          drawFromLine: getDrawLine(
+            state.drawFromLine,
+            state.lineCount,
+            position.line
+          ),
+        },
+        {
+          cmd: "CHANGE_POSITION",
+          lines: state.lines,
+          position,
+        },
+      ];
+    },
+    NEXT_CHAR: (state): Transition => {
+      const char = state.position.absolute + 1;
+      const position = getPositionByAbsolute(state.lines, char);
+
+      return [
+        {
+          ...state,
+
+          position,
+          drawFromLine: getDrawLine(
+            state.drawFromLine,
+            state.lineCount,
+            position.line
+          ),
+        },
+        {
+          cmd: "CHANGE_POSITION",
+          lines: state.lines,
+          position,
+        },
+      ];
+    },
+    PREV_CHAR: (state): Transition => {
+      const char = state.position.absolute - 1;
+      const position = getPositionByAbsolute(state.lines, char);
+
+      return [
+        {
+          ...state,
+
+          position,
+          drawFromLine: getDrawLine(
+            state.drawFromLine,
+            state.lineCount,
+            position.line
+          ),
+        },
+        {
+          cmd: "CHANGE_POSITION",
+          lines: state.lines,
+          position,
+        },
+      ];
+    },
+
+    PREV_WORD: (state): Transition => {
+      let char: number;
+
+      if (Date.now() - state.lastPositioning < DOUBLE_DEBOUNCE) {
+        char = getAbsolutePosition(state.lines, {
+          line: state.position.line,
           char: 0,
         });
-      }
+      } else {
+        char = state.position.absolute - 1;
 
-      let newLine = line + 1;
-
-      for (newLine; newLine < lines.length; newLine++) {
-        if (lines[newLine] === "") {
-          newLine++;
-          break;
+        for (char; char > 0; char--) {
+          if (state.content[char] === " " || state.content[char] === "\n") {
+            break;
+          }
         }
       }
 
-      newLine = Math.min(newLine, lines.length - 1);
+      const position = getPositionByAbsolute(state.lines, char);
 
-      return changePosition(state, {
-        lines,
-        line: newLine,
-        char: 0,
-      });
+      return [
+        {
+          ...state,
+
+          position,
+          lastPositioning: Date.now(),
+          drawFromLine: getDrawLine(
+            state.drawFromLine,
+            state.lineCount,
+            position.line
+          ),
+        },
+        {
+          cmd: "UPDATE",
+          content: state.content,
+          position,
+          lines: state.lines,
+        },
+      ];
     },
-    PREV_PARAGRAPH: (_, state): Transition => {
-      const { lines, line, lastPositioning } = state;
 
-      if (Date.now() - lastPositioning < 150) {
-        return changePosition(state, {
-          lines,
+    NEXT_WORD: (state): Transition => {
+      let char: number;
+
+      if (Date.now() - state.lastPositioning < DOUBLE_DEBOUNCE) {
+        char = getAbsolutePosition(state.lines, {
+          line: state.position.line,
+          char: state.lines[state.position.line].length,
+        });
+      } else {
+        char = state.position.absolute + 1;
+
+        for (char; char < state.content.length; char++) {
+          if (state.content[char] === " " || state.content[char] === "\n") {
+            break;
+          }
+        }
+      }
+
+      const position = getPositionByAbsolute(state.lines, char);
+
+      return [
+        {
+          ...state,
+
+          position,
+          lastPositioning: Date.now(),
+          drawFromLine: getDrawLine(
+            state.drawFromLine,
+            state.lineCount,
+            position.line
+          ),
+        },
+        {
+          cmd: "UPDATE",
+          content: state.content,
+          position,
+          lines: state.lines,
+        },
+      ];
+    },
+
+    NEXT_PARAGRAPH: (state): Transition => {
+      let char: number;
+
+      if (Date.now() - state.lastPositioning < DOUBLE_DEBOUNCE) {
+        char = getAbsolutePosition(state.lines, {
+          line: state.lines.length - 1,
+          char: 0,
+        });
+      } else {
+        char = state.position.absolute;
+
+        for (char; char < state.content.length; char++) {
+          if (
+            state.content[char] === "\n" &&
+            state.content[char + 1] !== "\n"
+          ) {
+            char += 1;
+            break;
+          }
+        }
+      }
+
+      const position = getPositionByAbsolute(state.lines, char);
+
+      return [
+        {
+          ...state,
+
+          position,
+          lastPositioning: Date.now(),
+          drawFromLine: getDrawLine(
+            state.drawFromLine,
+            state.lineCount,
+            position.line
+          ),
+        },
+        {
+          cmd: "UPDATE",
+          content: state.content,
+          position,
+          lines: state.lines,
+        },
+      ];
+    },
+
+    PREV_PARAGRAPH: (state): Transition => {
+      let char: number;
+
+      if (Date.now() - state.lastPositioning < DOUBLE_DEBOUNCE) {
+        char = getAbsolutePosition(state.lines, {
           line: 0,
           char: 0,
         });
-      }
+      } else {
+        char = state.position.absolute - 1;
 
-      let newLine = line - 1;
+        let startChar;
 
-      for (newLine; newLine > 0; newLine--) {
-        if (lines[newLine - 1] === "") {
-          break;
+        for (char; char > 0; char--) {
+          if (state.content[char] === "\n" && !startChar) {
+            startChar = char;
+          } else if (
+            state.content[char] === "\n" &&
+            state.content[char + 1] !== "\n"
+          ) {
+            char += 1;
+            break;
+          }
         }
       }
 
-      newLine = Math.max(newLine, 0);
+      const position = getPositionByAbsolute(state.lines, char);
 
-      return changePosition(state, {
-        lines,
-        line: newLine,
-        char: 0,
-      });
+      return [
+        {
+          ...state,
+
+          position,
+          lastPositioning: Date.now(),
+          drawFromLine: getDrawLine(
+            state.drawFromLine,
+            state.lineCount,
+            position.line
+          ),
+        },
+        {
+          cmd: "UPDATE",
+          content: state.content,
+          position,
+          lines: state.lines,
+        },
+      ];
     },
   },
 };
 
 export default function Editor({
   value = "",
-  caret = {
+  position = {
     line: 0,
     char: 0,
+    absolute: 0,
   },
   height = 500,
   onChange,
@@ -428,41 +617,44 @@ export default function Editor({
 }: {
   height: number;
   value: string;
-  caret: {
-    line: number;
-    char: number;
-  };
+  position: Position;
   onChange: (value: string) => void;
-  onCaretChange: (position: { line: number; char: number }) => void;
+  onCaretChange: (position: Position) => void;
 }) {
   const width = LINE_LENGTH * FONT_SIZE;
   const [canvas, ctx] = useCanvas(width, height);
+  const [{ char, lines }] = useState(() => {
+    const lines = getLines(value);
+    return {
+      lines,
+      char: getAbsolutePosition(lines, position),
+    };
+  });
+  const lineCount = Math.floor(height / LINE_HEIGHT);
   const [state, dispatch] = useStates(transitions, {
-    context: "IDLE",
-    lines: value.split("\n"),
-    line: caret.line,
-    char: caret.char,
+    state: "IDLE",
+    content: value,
+    lines,
+    position,
     lastPositioning: Date.now(),
+    drawFromLine: getDrawLine(position.line, lineCount, position.line),
+    lineCount,
   });
 
-  function drawLine(line: number, text: string) {
-    ctx.clearRect(PADDING, line * LINE_HEIGHT, width, LINE_HEIGHT);
-    ctx.fillText(text, PADDING, (line + 1) * LINE_HEIGHT);
-  }
+  function drawLines(lines: string[], position: Position) {
+    ctx.clearRect(0, 0, width, height);
 
-  function drawLines(lines: string[], currentLine: number) {
-    ctx.clearRect(PADDING, currentLine * LINE_HEIGHT, width, height);
-
-    for (let line = currentLine; line < lines.length; line++) {
+    for (let line = state.drawFromLine; line < lines.length; line++) {
       const text = lines[line];
-      ctx.fillText(text, PADDING, (line + 1) * LINE_HEIGHT);
+      const drawLine = line - state.drawFromLine;
+      ctx.fillText(text, PADDING, (drawLine + 1) * LINE_HEIGHT);
     }
-  }
 
-  function drawCaret(line: number, char: number, text: string) {
+    const text = lines[position.line] || "";
+
     ctx.fillRect(
-      PADDING + ctx.measureText(text.slice(0, char)).width,
-      line * LINE_HEIGHT + LINE_HEIGHT / 2,
+      PADDING + ctx.measureText(text.slice(0, position.char)).width,
+      (position.line - state.drawFromLine) * LINE_HEIGHT + LINE_HEIGHT / 2,
       1,
       LINE_HEIGHT / 2
     );
@@ -474,8 +666,11 @@ export default function Editor({
       ctx.fillStyle = "#EAEAEA";
       ctx.textBaseline = "bottom";
 
-      drawLines(state.lines, 0);
-      drawCaret(caret.line, caret.char, state.lines[caret.line]);
+      drawLines(
+        state.lines,
+        getPositionByAbsolute(state.lines, state.position.absolute)
+      );
+      // drawCaret(caret.line, caret.char, state.lines[caret.line]);
     }
   }, [ctx]);
 
@@ -529,33 +724,16 @@ export default function Editor({
     };
   });
 
-  useCommandEffect(state, "INSERT", ({ line, lines, char }) => {
-    drawLine(line, lines[line]);
-    drawCaret(line, char, lines[line]);
-    onCaretChange({ line, char });
-    onChange(lines.join("\n"));
+  useCommandEffect(state, "UPDATE", ({ content, lines, position }) => {
+    drawLines(lines, position);
+    onCaretChange(position);
+    onChange(content);
   });
 
-  useCommandEffect(state, "REMOVE", ({ line, lines, char }) => {
-    drawLine(line, lines[line]);
-    drawCaret(line, char, lines[line]);
-    onCaretChange({ line, char });
-    onChange(lines.join("\n"));
+  useCommandEffect(state, "CHANGE_POSITION", ({ position, lines }) => {
+    drawLines(lines, position);
+    onCaretChange(position);
   });
-
-  useCommandEffect(
-    state,
-    "CHANGE_POSITION",
-    ({ lines, prevLines, prevLine, line, char }) => {
-      drawLines(lines, Math.min(prevLine, line));
-      drawCaret(line, char, lines[line]);
-      onCaretChange({ line, char });
-
-      if (lines !== prevLines) {
-        onChange(lines.join("\n"));
-      }
-    }
-  );
 
   return canvas;
 }

@@ -1,35 +1,33 @@
 import { StateTransition } from "react-states";
 import { Excalidraw, GitChange, Page } from "../../environments/project";
+import { Position } from "../../components/Editor";
 
 export type { Excalidraw, Page };
 
 export type ModeState =
   | {
-      context: "EDITING";
+      state: "EDITING";
     }
   | {
-      context: "READING";
+      state: "READING";
     }
   | {
-      context: "DRAWING";
+      state: "DRAWING";
       id: string;
     };
 
 export type MenuState =
   | {
-      context: "IDLE";
+      state: "IDLE";
     }
   | {
-      context: "TOC";
+      state: "TOC";
     }
   | {
-      context: "GIT";
+      state: "GIT";
     };
 
-export type CaretPosition = {
-  line: number;
-  char: number;
-};
+export type CaretPosition = Position;
 
 type BaseState = {
   pageIndex: number;
@@ -45,15 +43,15 @@ type BaseState = {
 export type State = BaseState &
   (
     | {
-        context: "LOADING_PROJECT";
+        state: "LOADING_PROJECT";
       }
     | {
-        context: "READY";
+        state: "READY";
         commitSha: string;
         changes: GitChange[];
       }
     | {
-        context: "SAVING";
+        state: "SAVING";
         commitSha: string;
         changes: GitChange[];
       }

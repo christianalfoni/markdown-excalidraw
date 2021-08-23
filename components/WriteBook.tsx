@@ -12,18 +12,15 @@ import { TocList } from "./TocList";
 import { GitChanges } from "./GitChanges";
 import { DatabaseIcon, MenuAlt2Icon } from "@heroicons/react/outline";
 import { classNames } from "../utils";
+import { useEnvironment } from "../environments";
 
 export const WriteBook = () => {
+  const { excalidraw } = useEnvironment();
   const [book, send] = useWriteBook();
   const { menu, pages, pageIndex, excalidraws } = book;
   const currentPage = pages[pageIndex];
-
-  const [Comp, setComp] = useState<typeof ExcalidrawComponent | null>(null);
   const excalidrawRef = useRef<ExcalidrawAPIRefValue>(null);
-
-  useEffect(() => {
-    import("@excalidraw/excalidraw").then((comp) => setComp(comp.default));
-  }, []);
+  const Comp = excalidraw.getComponent();
 
   const onAddPage = useCallback(() => {
     send({ type: "ADD_PAGE" });
@@ -121,7 +118,7 @@ export const WriteBook = () => {
                 }}
               />
             ),
-            READING: () => <Pages pages={pages} />,
+            READING: () => <Pages pages={pages} excalidraws={excalidraws} />,
           })}
         </div>
       </div>
