@@ -84,7 +84,8 @@ const transitions: Transitions<
 
       if (
         caretPosition.char === 0 &&
-        content[caretPosition.absolute] === "\n"
+        (content[caretPosition.absolute] === "\n" ||
+          content[caretPosition.absolute] === undefined)
       ) {
         const id = String(Date.now());
 
@@ -100,7 +101,7 @@ const transitions: Transitions<
             cmd: "INSERT_EXCALIDRAW",
             content:
               content.slice(0, caretPosition.absolute) +
-              `<Excalidraw id="${id}" />\n` +
+              `<Excalidraw id="${id}" />` +
               content.slice(caretPosition.absolute),
             id,
             pageIndex,

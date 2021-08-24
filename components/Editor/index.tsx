@@ -190,7 +190,7 @@ function getDrawLine(current: number, lineCount: number, line: number) {
   }
 
   if (line < current || line > lineCount) {
-    return Math.max(0, line - 10);
+    return Math.max(0, line - lineCount + 1);
   }
 
   return current;
@@ -258,7 +258,8 @@ const transitions: Transitions<State, Action, Command> = {
     WORD_REMOVE: (state) => {
       if (
         state.content[state.position.absolute] !== " " &&
-        state.content[state.position.absolute] !== "\n"
+        state.content[state.position.absolute] !== "\n" &&
+        state.content[state.position.absolute] !== undefined // End
       ) {
         return state;
       }
@@ -623,13 +624,7 @@ export default function Editor({
 }) {
   const width = LINE_LENGTH * FONT_SIZE;
   const [canvas, ctx] = useCanvas(width, height);
-  const [{ char, lines }] = useState(() => {
-    const lines = getLines(value);
-    return {
-      lines,
-      char: getAbsolutePosition(lines, position),
-    };
-  });
+  const [lines] = useState(() => getLines(value));
   const lineCount = Math.floor(height / LINE_HEIGHT);
   const [state, dispatch] = useStates(transitions, {
     state: "IDLE",
@@ -637,7 +632,7 @@ export default function Editor({
     lines,
     position,
     lastPositioning: Date.now(),
-    drawFromLine: getDrawLine(position.line, lineCount, position.line),
+    drawFromLine: Math.max(0, position.line - lineCount + 1),
     lineCount,
   });
 

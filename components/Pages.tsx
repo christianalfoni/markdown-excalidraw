@@ -7,15 +7,9 @@ import { Excalidraw, Page } from "../features/writeBook";
 import { useSnippets } from "../features/snippets";
 import { usePageState } from "../utils/usePageState";
 import { excalidrawsContext } from "./ExcalidrawsProvider";
-import {
-  Sandpack,
-  SandpackCodeEditor,
-  SandpackLayout,
-  SandpackPredefinedTemplate,
-  SandpackPreview,
-  SandpackProvider,
-} from "@codesandbox/sandpack-react";
+import { Sandpack } from "@codesandbox/sandpack-react";
 import { useEnvironment } from "../environments";
+import { useSandboxes } from "../features/sandboxes";
 
 const codeStyle = {
   hljs: {
@@ -24,8 +18,8 @@ const codeStyle = {
     marginTop: "1em",
     marginBottom: "1em",
     padding: "1rem",
-    color: "#F9FAFB",
-    background: "#374151",
+    color: "#111827",
+    background: "#F3F4F6",
     fontSize: "14px",
   },
   "hljs-comment": {
@@ -207,13 +201,41 @@ const options: MarkdownToJSX.Options = {
         </div>
       );
     },
-    Sandbox(props) {
+    Sandbox({ path }) {
+      const [context, send] = useSandboxes();
+      const sandbox = context.sandboxes[path];
+
+      useEffect(() => {
+        send({
+          type: "LOAD_SANDBOX",
+          path,
+        });
+      }, []);
+
+      if (!sandbox) {
+        return null;
+      }
+
+      console.log(sandbox);
+
       return (
         <Sandpack
-          {...props}
+          files={sandbox}
           options={{
-            editorWidthPercentage: 60,
             wrapContent: true,
+            editorHeight: 325,
+          }}
+          theme={{
+            palette: {
+              defaultBackground: "#F3F4F6",
+            },
+            syntax: {
+              plain: "#111827",
+              tag: "#F87171",
+              keyword: "#60A5FA",
+              string: "#FBBF24",
+            },
+            typography: {},
           }}
         />
       );
@@ -258,7 +280,7 @@ function getSplitPages(
       continue;
     }
 
-    if (text.startsWith("<Sandbox ")) {
+    if (text.startsWith("<Sandbox")) {
       if (currentPage) {
         pages.push(currentPage);
       }
@@ -287,7 +309,7 @@ function getSplitPages(
       currentHeight += height;
     }
 
-    if (currentHeight >= 700 || line === lines.length - 1) {
+    if (currentHeight >= 700) {
       pages.push(currentPage);
       currentHeight = 0;
       currentPage = text + "\n";
@@ -296,6 +318,8 @@ function getSplitPages(
 
     currentPage += text + "\n";
   }
+
+  pages.push(currentPage);
 
   return pages;
 }
@@ -333,7 +357,7 @@ export const Pages = ({
   return (
     <div className="cover">
       <div className="book">
-        <div className="book__page book__page--1 bg-gray-50 rounded-md py-4 border-gray-700 border">
+        <div className="book__page book__page--1 bg-gray-50 rounded-md border-gray-700 border">
           <Markdown options={options}>{splitPages[index] ?? ""}</Markdown>
           <span
             className="absolute bottom-0 left-0 text-xs text-gray-500 p-4 cursor-pointer"
@@ -345,7 +369,7 @@ export const Pages = ({
           </span>
         </div>
 
-        <div className="book__page book__page--4 bg-gray-50 rounded-md py-4 border-gray-700 border">
+        <div className="book__page book__page--4 bg-gray-50 rounded-md  border-gray-700 border">
           <Markdown options={options}>{splitPages[index + 3] ?? ""}</Markdown>
           <span className="absolute bottom-0 right-0 p-4 text-xs text-gray-500 cursor-pointer">
             Page {index + 4}
@@ -362,7 +386,11 @@ export const Pages = ({
             }[flip]
           }
         >
-          <div className="book__page-front bg-gray-50 rounded-md py-4 border-gray-700 border">
+          <div
+            className={
+              "book__page-front bg-gray-50 rounded-md border-gray-700 border"
+            }
+          >
             <Markdown options={options}>{splitPages[index + 1] ?? ""}</Markdown>
             <span
               className="absolute bottom-0 right-0 text-xs text-gray-500 p-4 cursor-pointer"
@@ -373,7 +401,7 @@ export const Pages = ({
               Page {index + 2}
             </span>
           </div>
-          <div className="book__page-back bg-gray-50 rounded-md py-4 border-gray-700 border">
+          <div className="book__page-back bg-gray-50 rounded-md border-gray-700 border">
             <Markdown options={options}>{splitPages[index + 2] ?? ""}</Markdown>
             <span className="absolute bottom-0 left-0 p-4 cursor-pointer text-xs text-gray-500">
               Page {index + 3}

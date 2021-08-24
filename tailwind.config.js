@@ -3,7 +3,7 @@ module.exports = {
   darkMode: false, // or 'media' or 'class'
   theme: {
     fontFamily: {
-      mono: ['"Source Code Pro"', "monospace"],
+      mono: ['"Fira Mono"', "monospace"],
       serif: ['"Inter"', "sans-serif"],
     },
     extend: {},

@@ -9,12 +9,13 @@ import { WriteBook } from "./WriteBook";
 import { Loading } from "./Loading";
 import { ReadBook } from "./ReadBook";
 import { ReadBookFeature } from "../features/readBook";
+import { SandboxesFeature } from "../features/sandboxes";
 
 export const App = () => {
   const [session] = useSession();
   const router = useRouter();
   const repoUrl = "https://github.com/christianalfoni/react-states";
-  const branch = "main";
+  const branch = "next";
   const page = router.query.page ? Number(router.query.page) : 0;
 
   return (
@@ -29,14 +30,18 @@ export const App = () => {
             page={page}
           >
             <SnippetsFeature repoUrl={repoUrl}>
-              <WriteBook />
+              <SandboxesFeature repoUrl={repoUrl}>
+                <WriteBook />
+              </SandboxesFeature>
             </SnippetsFeature>
           </WriteBookFeature>
         ),
         SIGNED_OUT: () => (
           <ReadBookFeature repoUrl={repoUrl} branch={branch} page={page}>
             <SnippetsFeature repoUrl={repoUrl}>
-              <ReadBook />
+              <SandboxesFeature repoUrl={repoUrl}>
+                <ReadBook />
+              </SandboxesFeature>
             </SnippetsFeature>
           </ReadBookFeature>
         ),

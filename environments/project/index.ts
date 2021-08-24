@@ -19,6 +19,10 @@ export type Page = {
   toc: Toc[];
 };
 
+export type Sandbox = {
+  [path: string]: string;
+};
+
 export type GitStatus =
   | "ADD_UNSTAGED"
   | "ADD_STAGED"
@@ -64,6 +68,16 @@ export type ProjectSubscription =
       error: string;
     }
   | {
+      type: "PROJECT:LOAD_SANDBOX_SUCCESS";
+      path: string;
+      sandbox: Sandbox;
+    }
+  | {
+      type: "PROJECT:LOAD_SANDBOX_ERROR";
+      path: string;
+      error: string;
+    }
+  | {
       type: "PROJECT:GIT_UPDATE";
       changes: GitChange[];
     }
@@ -84,5 +98,6 @@ export type Project = {
   updateExcalidraw(repoUrl: string, id: string, excalidraw: Excalidraw): void;
   addPage(repoUrl: string, index: number): void;
   loadSnippet(repoUrl: string, path: string): void;
+  loadSandbox(repoUrl: string, path: string): void;
   save(repoUrl: string, accessToken: string): void;
 };

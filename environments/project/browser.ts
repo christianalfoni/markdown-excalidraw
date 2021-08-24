@@ -60,6 +60,45 @@ export const createProject = (): Project => {
     );
   }
 
+  function getFilesRecursively(
+    dir: string,
+    nestedDir?: string
+  ): Promise<{
+    [path: string]: string;
+  }> {
+    return imports.then(({ fs }) =>
+      fs.promises
+        .readdir(dir)
+        .then((contents) =>
+          Promise.all(
+            contents.map((fileOrDir) => {
+              const fullPath = path.join(dir, fileOrDir);
+
+              return fs.promises.lstat(fullPath).then((lstat) => {
+                if (lstat.isDirectory()) {
+                  return getFilesRecursively(fullPath, fileOrDir);
+                }
+
+                return fs.promises.readFile(fullPath).then((value) => ({
+                  [`/${path.join(nestedDir || "", fileOrDir)}`]:
+                    new TextDecoder().decode(value),
+                }));
+              });
+            })
+          )
+        )
+        .then((files) =>
+          files.reduce<{ [path: string]: string }>(
+            (aggr, file) => ({
+              ...aggr,
+              ...file,
+            }),
+            {}
+          )
+        )
+    );
+  }
+
   const emitChangesDebounced = debounce((repoUrl: string) => {
     getChanges(repoUrl).then((changes) => {
       projectSubscription.emit({
@@ -75,6 +114,11 @@ export const createProject = (): Project => {
   } = {};
   let snippets: {
     [path: string]: string;
+  } = {};
+  let sandboxes: {
+    [path: string]: {
+      [filePath: string]: string;
+    };
   } = {};
 
   return {
@@ -272,6 +316,34 @@ export const createProject = (): Project => {
               type: "PROJECT:LOAD_SNIPPET_SUCCESS",
               path: snippetPath,
               code: snippets[snippetPath],
+            });
+          });
+      }
+    },
+    loadSandbox(repoUrl, sandboxPath) {
+      if (sandboxes[sandboxPath]) {
+        this.subscription.emit({
+          type: "PROJECT:LOAD_SANDBOX_SUCCESS",
+          path: sandboxPath,
+          sandbox: sandboxes[sandboxPath],
+        });
+      } else {
+        const projectPath = getProjectPath(repoUrl);
+        getFilesRecursively(path.join(projectPath, sandboxPath))
+          .then((sandbox) => {
+            sandboxes[sandboxPath] = sandbox;
+            this.subscription.emit({
+              type: "PROJECT:LOAD_SANDBOX_SUCCESS",
+              path: sandboxPath,
+              sandbox,
+            });
+          })
+          .catch((error) => {
+            console.log(error);
+            this.subscription.emit({
+              type: "PROJECT:LOAD_SANDBOX_ERROR",
+              path: sandboxPath,
+              error: error.message,
             });
           });
       }
