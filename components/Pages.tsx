@@ -133,6 +133,20 @@ const options: MarkdownToJSX.Options = {
         </h1>
       );
     },
+    h2({ children }) {
+      return (
+        <h2 className="text-2xl font-medium text-gray-700 px-6 my-3">
+          {children}
+        </h2>
+      );
+    },
+    h3({ children }) {
+      return (
+        <h2 className="text-xl font-medium text-gray-700 px-6 my-2">
+          {children}
+        </h2>
+      );
+    },
     p({ children }) {
       return <p className="px-6 my-4 text-gray-600">{children}</p>;
     },
@@ -276,6 +290,10 @@ function getSplitPages(
 
     if (text.startsWith("# ")) {
       currentHeight += 36;
+    } else if (text.startsWith("## ")) {
+      currentHeight += 32;
+    } else if (text.startsWith("### ")) {
+      currentHeight += 28;
     } else if (text.startsWith("```")) {
       text += "\n";
       currentHeight += 60; // margin + padding
