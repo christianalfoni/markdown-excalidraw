@@ -16,7 +16,7 @@ export const ReadBook = () => {
 
   return match(book, {
     LOADING_PROJECT: () => <Loading />,
-    READY: ({ excalidraws, pages, pageIndex }) => (
+    READY: ({ excalidraws, chapters, chapterIndex }) => (
       <ExcalidrawsProvider excalidraws={excalidraws}>
         <div
           className={classNames(
@@ -27,7 +27,7 @@ export const ReadBook = () => {
             })
           )}
         >
-          <TocList pages={pages} pageIndex={pageIndex} />
+          <TocList chapters={chapters} chapterIndex={chapterIndex} />
         </div>
         <div
           className={classNames(
@@ -55,7 +55,11 @@ export const ReadBook = () => {
             className="w-6 h-6 text-gray-100 absolute top-4 right-4"
           />
           <div className="mx-auto flex items-center">
-            <Pages pages={pages} excalidraws={book.excalidraws} />
+            <Pages
+              chapter={chapterIndex}
+              chapters={chapters}
+              excalidraws={book.excalidraws}
+            />
           </div>
         </div>
       </ExcalidrawsProvider>

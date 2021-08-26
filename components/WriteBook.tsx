@@ -17,17 +17,17 @@ import { useEnvironment } from "../environments";
 export const WriteBook = () => {
   const { excalidraw } = useEnvironment();
   const [book, send] = useWriteBook();
-  const { menu, pages, pageIndex, excalidraws } = book;
-  const currentPage = pages[pageIndex];
+  const { menu, chapters, chapterIndex, excalidraws } = book;
+  const currentChapter = chapters[chapterIndex];
   const excalidrawRef = useRef<ExcalidrawAPIRefValue>(null);
   const Comp = excalidraw.getComponent();
 
-  const onAddPage = useCallback(() => {
-    send({ type: "ADD_PAGE" });
+  const onAddChapter = useCallback(() => {
+    send({ type: "ADD_CHAPTER" });
   }, []);
 
   const renderBook = (
-    readyState: PickState<WriteBookState, "READY" | "SAVING">
+    readyState: PickState<WriteBookState, "READY" | "SAVING" | "UPDATING">
   ) => (
     <ExcalidrawsProvider excalidraws={readyState.excalidraws}>
       <div
@@ -40,7 +40,11 @@ export const WriteBook = () => {
           })
         )}
       >
-        <TocList pages={pages} pageIndex={pageIndex} onAddPage={onAddPage} />
+        <TocList
+          chapters={chapters}
+          chapterIndex={chapterIndex}
+          onAddChapter={onAddChapter}
+        />
       </div>
       <div
         className={classNames(
@@ -66,9 +70,17 @@ export const WriteBook = () => {
           }}
           className="w-6 h-6 text-gray-100 absolute top-4 right-4"
         />
-        {readyState.changes.length ? (
-          <span className="bg-yellow-500 w-3 h-3 top-3 right-4 rounded-full absolute border-2 border-gray-900" />
-        ) : null}
+        {match(readyState.version, {
+          BEHIND: () => (
+            <span className="bg-red-500 w-3 h-3 top-3 right-4 rounded-full absolute border-2 border-gray-900" />
+          ),
+          UP_TO_DATE: () =>
+            readyState.changes.length ? (
+              <span className="bg-yellow-500 w-3 h-3 top-3 right-4 rounded-full absolute border-2 border-gray-900" />
+            ) : (
+              <span className="bg-green-500 w-3 h-3 top-3 right-4 rounded-full absolute border-2 border-gray-900" />
+            ),
+        })}
         <div className="mx-auto flex items-center">
           {match(book.mode, {
             DRAWING: ({ id }) => (
@@ -101,8 +113,8 @@ export const WriteBook = () => {
             ),
             EDITING: () => (
               <EditPage
-                key={pageIndex}
-                initialContent={currentPage.content}
+                key={chapterIndex}
+                initialContent={currentChapter.content}
                 caretPosition={book.caretPosition}
                 updateCaretPosition={(position) => {
                   send({
@@ -118,7 +130,13 @@ export const WriteBook = () => {
                 }}
               />
             ),
-            READING: () => <Pages pages={pages} excalidraws={excalidraws} />,
+            READING: () => (
+              <Pages
+                chapter={chapterIndex}
+                chapters={chapters}
+                excalidraws={excalidraws}
+              />
+            ),
           })}
         </div>
       </div>
@@ -130,5 +148,6 @@ export const WriteBook = () => {
     LOADING_PROJECT: () => <Loading />,
     READY: renderBook,
     SAVING: renderBook,
+    UPDATING: renderBook,
   });
 };

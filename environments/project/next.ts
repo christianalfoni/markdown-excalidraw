@@ -4,9 +4,12 @@ import { Project } from ".";
 export const createProject = (): Project => ({
   subscription: subscription(),
   load() {},
-  updatePage() {},
+  updateChapter() {},
   updateExcalidraw() {},
-  addPage() {},
+  addChapter() {},
   loadSnippet() {},
   save() {},
+  checkVersion() {},
+  getLatestVersion() {},
+  loadSandbox() {},
 });

@@ -14,7 +14,7 @@ export type Toc = {
   descendants: Toc[];
 };
 
-export type Page = {
+export type Chapter = {
   content: string;
   toc: Toc[];
 };
@@ -42,7 +42,7 @@ export type GitChange = {
 export type ProjectSubscription =
   | {
       type: "PROJECT:LOAD_SUCCESS";
-      pages: Page[];
+      chapters: Chapter[];
       excalidraws: {
         [id: string]: Excalidraw;
       };
@@ -54,8 +54,8 @@ export type ProjectSubscription =
       error: string;
     }
   | {
-      type: "PROJECT:PAGES_UPDATE";
-      pages: Page[];
+      type: "PROJECT:CHAPTERS_UPDATE";
+      chapters: Chapter[];
     }
   | {
       type: "PROJECT:LOAD_SNIPPET_SUCCESS";
@@ -89,14 +89,20 @@ export type ProjectSubscription =
   | {
       type: "PROJECT:SAVE_ERROR";
       error: string;
+    }
+  | {
+      type: "PROJECT:VERSION_CHECK_SUCCESS";
+      commitSha: string | null;
     };
 
 export type Project = {
   subscription: Subscription<ProjectSubscription>;
-  load: (repoUrl: string, branch: string) => void;
-  updatePage(repoUrl: string, pageIndex: number, content: string): void;
+  load(repoUrl: string, branch: string): void;
+  checkVersion(repoUrl: string, branch: string): void;
+  getLatestVersion(repoUrl: string, branch: string): void;
+  updateChapter(repoUrl: string, chapterIndex: number, content: string): void;
   updateExcalidraw(repoUrl: string, id: string, excalidraw: Excalidraw): void;
-  addPage(repoUrl: string, index: number): void;
+  addChapter(repoUrl: string, index: number): void;
   loadSnippet(repoUrl: string, path: string): void;
   loadSandbox(repoUrl: string, path: string): void;
   save(repoUrl: string, accessToken: string): void;

@@ -16,7 +16,7 @@ export const App = () => {
   const router = useRouter();
   const repoUrl = "https://github.com/christianalfoni/react-states";
   const branch = "next";
-  const page = router.query.page ? Number(router.query.page) : 0;
+  const chapter = router.query.chapter ? Number(router.query.chapter) : 0;
 
   return (
     <AppWrapper>
@@ -27,7 +27,7 @@ export const App = () => {
             repoUrl={repoUrl}
             branch={branch}
             accessToken={accessToken}
-            page={page}
+            chapter={chapter}
           >
             <SnippetsFeature repoUrl={repoUrl}>
               <SandboxesFeature repoUrl={repoUrl}>
@@ -37,7 +37,7 @@ export const App = () => {
           </WriteBookFeature>
         ),
         SIGNED_OUT: () => (
-          <ReadBookFeature repoUrl={repoUrl} branch={branch} page={page}>
+          <ReadBookFeature repoUrl={repoUrl} branch={branch} chapter={chapter}>
             <SnippetsFeature repoUrl={repoUrl}>
               <SandboxesFeature repoUrl={repoUrl}>
                 <ReadBook />

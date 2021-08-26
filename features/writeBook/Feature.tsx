@@ -23,27 +23,36 @@ const transitions: Transitions<
   LOADING_PROJECT: {
     "PROJECT:LOAD_SUCCESS": (
       state,
-      { excalidraws, pages, commitSha, changes }
+      { excalidraws, chapters, commitSha, changes }
     ): Transition => ({
       ...state,
       state: "READY",
       excalidraws,
-      pages,
+      chapters,
       commitSha,
       changes,
     }),
   },
   READY: {
-    "PROJECT:PAGES_UPDATE": (state, { pages }): Transition => ({
+    "PROJECT:CHAPTERS_UPDATE": (state, { chapters }): Transition => ({
       ...state,
-      pages,
+      chapters,
     }),
+    "PROJECT:VERSION_CHECK_SUCCESS": (state, { commitSha }): Transition =>
+      commitSha !== state.commitSha
+        ? {
+            ...state,
+            version: {
+              state: "BEHIND",
+            },
+          }
+        : state,
     UPDATE_PAGE: (state, { content }): Transition => [
       state,
       {
         cmd: "UPDATE_PAGE",
         content,
-        pageIndex: state.pageIndex,
+        chapterIndex: state.chapterIndex,
       },
     ],
     CHANGE_MODE: (state, { mode }): Transition => ({
@@ -79,8 +88,8 @@ const transitions: Transitions<
       changes,
     }),
     INSERT_EXCALIDRAW: (state): Transition => {
-      const { pages, pageIndex, caretPosition } = state;
-      const content = pages[pageIndex].content;
+      const { chapters, chapterIndex, caretPosition } = state;
+      const content = chapters[chapterIndex].content;
 
       if (
         caretPosition.char === 0 &&
@@ -104,7 +113,7 @@ const transitions: Transitions<
               `<Excalidraw id="${id}" />` +
               content.slice(caretPosition.absolute),
             id,
-            pageIndex,
+            chapterIndex,
           },
         ];
       }
@@ -125,16 +134,16 @@ const transitions: Transitions<
 
       return state;
     },
-    ADD_PAGE: (state): Transition => [
+    ADD_CHAPTER: (state): Transition => [
       state,
       {
-        cmd: "ADD_PAGE",
-        pageIndex: state.pageIndex,
+        cmd: "ADD_CHAPTER",
+        chapterIndex: state.chapterIndex,
       },
     ],
-    CHANGE_PAGE: (state, { index }): Transition => ({
+    CHANGE_CHAPTER: (state, { index }): Transition => ({
       ...state,
-      pageIndex: index,
+      chapterIndex: index,
       caretPosition: {
         line: 0,
         char: 0,
@@ -145,6 +154,10 @@ const transitions: Transitions<
       ...state,
       state: "SAVING",
     }),
+    UPDATE: (state): Transition => ({
+      ...state,
+      state: "UPDATING",
+    }),
   },
   SAVING: {
     "PROJECT:SAVE_SUCCESS": (state, { commitSha, changes }): Transition => ({
@@ -152,6 +165,22 @@ const transitions: Transitions<
       state: "READY",
       commitSha,
       changes,
+    }),
+  },
+  UPDATING: {
+    "PROJECT:LOAD_SUCCESS": (
+      state,
+      { excalidraws, chapters, commitSha, changes }
+    ): Transition => ({
+      ...state,
+      state: "READY",
+      excalidraws,
+      chapters,
+      commitSha,
+      changes,
+      version: {
+        state: "UP_TO_DATE",
+      },
     }),
   },
 };
@@ -163,12 +192,12 @@ export const FeatureProvider = ({
   repoUrl,
   branch,
   accessToken,
-  page,
+  chapter,
   initialState = {
     state: "LOADING_PROJECT",
-    pages: [],
+    chapters: [],
     excalidraws: {},
-    pageIndex: page,
+    chapterIndex: chapter,
     mode: { state: "READING" },
     menu: { state: "IDLE" },
     caretPosition: {
@@ -176,10 +205,13 @@ export const FeatureProvider = ({
       char: 0,
       absolute: 0,
     },
+    version: {
+      state: "UP_TO_DATE",
+    },
   },
 }: {
   children: React.ReactNode;
-  page: number;
+  chapter: number;
   repoUrl: string;
   branch: string;
   accessToken: string;
@@ -199,11 +231,24 @@ export const FeatureProvider = ({
   useKeyboardShortcuts(feature);
 
   useEffect(() => {
+    function checkVersion() {
+      project.checkVersion(repoUrl, branch);
+    }
+    const interval = setInterval(checkVersion, 60 * 1000);
+
+    checkVersion();
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
     dispatch({
-      type: "CHANGE_PAGE",
-      index: Number(page),
+      type: "CHANGE_CHAPTER",
+      index: Number(chapter),
     });
-  }, [page]);
+  }, [chapter]);
 
   useStateEffect(state, "LOADING_PROJECT", () => {
     project.load(repoUrl, branch);
@@ -213,20 +258,24 @@ export const FeatureProvider = ({
     project.save(repoUrl, accessToken);
   });
 
-  useCommandEffect(state, "UPDATE_PAGE", ({ pageIndex, content }) => {
-    project.updatePage(repoUrl, pageIndex, content);
+  useStateEffect(state, "UPDATING", () => {
+    project.getLatestVersion(repoUrl, branch);
+  });
+
+  useCommandEffect(state, "UPDATE_PAGE", ({ chapterIndex, content }) => {
+    project.updateChapter(repoUrl, chapterIndex, content);
   });
 
   useCommandEffect(state, "UPDATE_EXCALIDRAW", ({ id, excalidraw }) => {
     project.updateExcalidraw(repoUrl, id, excalidraw);
   });
 
-  useCommandEffect(state, "INSERT_EXCALIDRAW", ({ content, pageIndex }) => {
-    project.updatePage(repoUrl, pageIndex, content);
+  useCommandEffect(state, "INSERT_EXCALIDRAW", ({ content, chapterIndex }) => {
+    project.updateChapter(repoUrl, chapterIndex, content);
   });
 
-  useCommandEffect(state, "ADD_PAGE", ({ pageIndex }) => {
-    project.addPage(repoUrl, pageIndex + 1);
+  useCommandEffect(state, "ADD_CHAPTER", ({ chapterIndex }) => {
+    project.addChapter(repoUrl, chapterIndex + 1);
   });
 
   return (

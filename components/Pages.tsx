@@ -3,7 +3,7 @@ import Image from "next/image";
 import * as pathUtil from "path";
 import React, { useContext, useEffect, useState } from "react";
 import SyntaxHighlighter from "react-syntax-highlighter";
-import { Excalidraw, Page } from "../features/writeBook";
+import { Excalidraw, Chapter } from "../features/writeBook";
 import { useSnippets } from "../features/snippets";
 import { usePageState } from "../utils/usePageState";
 import { excalidrawsContext } from "./ExcalidrawsProvider";
@@ -18,8 +18,8 @@ const codeStyle = {
     marginTop: "1em",
     marginBottom: "1em",
     padding: "1rem",
-    color: "#111827",
-    background: "#F3F4F6",
+    color: "#F3F4F6",
+    background: "#374151",
     fontSize: "14px",
   },
   "hljs-comment": {
@@ -32,7 +32,6 @@ const codeStyle = {
   },
   "hljs-keyword": {
     color: "#60A5FA",
-    fontWeight: "bold",
   },
   "hljs-selector-tag": {
     color: "#F87171",
@@ -65,23 +64,18 @@ const codeStyle = {
   },
   "hljs-title": {
     color: "#900",
-    fontWeight: "bold",
   },
   "hljs-section": {
     color: "#900",
-    fontWeight: "bold",
   },
   "hljs-selector-id": {
     color: "#900",
-    fontWeight: "bold",
   },
   "hljs-type": {
     color: "#458",
-    fontWeight: "bold",
   },
   "hljs-class .hljs-title": {
     color: "#458",
-    fontWeight: "bold",
   },
   "hljs-tag": {
     color: "#F87171",
@@ -115,7 +109,6 @@ const codeStyle = {
   },
   "hljs-meta": {
     color: "#999",
-    fontWeight: "bold",
   },
   "hljs-deletion": {
     background: "#fdd",
@@ -134,7 +127,11 @@ const codeStyle = {
 const options: MarkdownToJSX.Options = {
   overrides: {
     h1({ children }) {
-      return <h1 className="text-3xl font-medium text-gray-700">{children}</h1>;
+      return (
+        <h1 className="text-3xl font-medium text-gray-700 px-6 my-4">
+          {children}
+        </h1>
+      );
     },
     p({ children }) {
       return <p className="px-6 my-4 text-gray-600">{children}</p>;
@@ -216,8 +213,6 @@ const options: MarkdownToJSX.Options = {
         return null;
       }
 
-      console.log(sandbox);
-
       return (
         <Sandpack
           files={sandbox}
@@ -225,18 +220,7 @@ const options: MarkdownToJSX.Options = {
             wrapContent: true,
             editorHeight: 325,
           }}
-          theme={{
-            palette: {
-              defaultBackground: "#F3F4F6",
-            },
-            syntax: {
-              plain: "#111827",
-              tag: "#F87171",
-              keyword: "#60A5FA",
-              string: "#FBBF24",
-            },
-            typography: {},
-          }}
+          theme="codesandbox-light"
         />
       );
     },
@@ -290,7 +274,9 @@ function getSplitPages(
       continue;
     }
 
-    if (text.startsWith("```")) {
+    if (text.startsWith("# ")) {
+      currentHeight += 36;
+    } else if (text.startsWith("```")) {
       text += "\n";
       currentHeight += 60; // margin + padding
       for (let codeLine = line + 1; codeLine < lines.length; codeLine++) {
@@ -325,54 +311,56 @@ function getSplitPages(
 }
 
 export const Pages = ({
-  pages,
+  chapter,
+  chapters,
   excalidraws,
 }: {
-  pages: Page[];
+  chapter: number;
+  chapters: Chapter[];
   excalidraws: Record<string, Excalidraw>;
 }) => {
+  const { excalidraw } = useEnvironment();
   const { index, flip, next, prev } = usePageState();
-  const [exportToCanvas, setExportToCanvas] = useState<Function | null>(null);
 
-  useEffect(() => {
-    import("@excalidraw/excalidraw").then((comp) =>
-      setExportToCanvas(() => comp.exportToCanvas)
-    );
-  }, []);
-
-  if (!exportToCanvas) {
-    return (
-      <div className="cover">
-        <div className="book"></div>
-      </div>
-    );
-  }
-
-  const splitPages = getSplitPages(
-    pages[0].content,
+  const pages = getSplitPages(
+    chapters[chapter].content,
     excalidraws,
-    exportToCanvas
+    excalidraw.exportToCanvas
   );
 
   return (
     <div className="cover">
       <div className="book">
-        <div className="book__page book__page--1 bg-gray-50 rounded-md border-gray-700 border">
-          <Markdown options={options}>{splitPages[index] ?? ""}</Markdown>
-          <span
-            className="absolute bottom-0 left-0 text-xs text-gray-500 p-4 cursor-pointer"
-            onClick={() => {
-              prev();
-            }}
-          >
-            Page {index + 1}
-          </span>
+        <div
+          className={`${
+            index === 0 ? "bg-gray-700" : "bg-gray-50"
+          } book__page book__page--1  rounded-md border-gray-700 border`}
+        >
+          {index === 0 ? (
+            <div className="flex w-full h-full items-center justify-center text-4xl text-gray-50">
+              Chapter {index + 1}
+            </div>
+          ) : (
+            <Markdown options={options}>{pages[index - 1] ?? ""}</Markdown>
+          )}
+          {index === 0 ? null : (
+            <span
+              className="absolute bottom-0 left-0 text-xs text-gray-500 p-4 cursor-pointer"
+              onClick={() => {
+                if (index > 0) {
+                  prev();
+                }
+              }}
+            >
+              Page {index + 1}
+            </span>
+          )}
         </div>
 
         <div className="book__page book__page--4 bg-gray-50 rounded-md  border-gray-700 border">
-          <Markdown options={options}>{splitPages[index + 3] ?? ""}</Markdown>
+          <Markdown options={options}>{pages[index + 2] ?? ""}</Markdown>
           <span className="absolute bottom-0 right-0 p-4 text-xs text-gray-500 cursor-pointer">
-            Page {index + 4}
+            Page {index + 3}
           </span>
         </div>
         <div
@@ -391,20 +379,22 @@ export const Pages = ({
               "book__page-front bg-gray-50 rounded-md border-gray-700 border"
             }
           >
-            <Markdown options={options}>{splitPages[index + 1] ?? ""}</Markdown>
+            <Markdown options={options}>{pages[index] ?? ""}</Markdown>
             <span
               className="absolute bottom-0 right-0 text-xs text-gray-500 p-4 cursor-pointer"
               onClick={() => {
-                next();
+                if (index < pages.length - 1) {
+                  next();
+                }
               }}
             >
-              Page {index + 2}
+              Page {index + 1}
             </span>
           </div>
           <div className="book__page-back bg-gray-50 rounded-md border-gray-700 border">
-            <Markdown options={options}>{splitPages[index + 2] ?? ""}</Markdown>
+            <Markdown options={options}>{pages[index + 1] ?? ""}</Markdown>
             <span className="absolute bottom-0 left-0 p-4 cursor-pointer text-xs text-gray-500">
-              Page {index + 3}
+              Page {index + 2}
             </span>
           </div>
         </div>

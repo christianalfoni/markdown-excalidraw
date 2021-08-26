@@ -5,14 +5,14 @@ import {
   useStates,
   useSubsription,
 } from "react-states";
-import { Excalidraw, Page } from "../../environments/project";
+import { Excalidraw, Chapter } from "../../environments/project";
 import { useContext, useEffect } from "react";
 import { createContext } from "react-states";
 import { useDevtools } from "react-states/devtools";
 import { ProjectSubscription } from "../../environments/project";
 import { useEnvironment } from "../../environments";
 
-export type { Excalidraw, Page };
+export type { Excalidraw, Chapter as Page };
 
 export type MenuState =
   | {
@@ -23,8 +23,8 @@ export type MenuState =
     };
 
 type BaseState = {
-  pageIndex: number;
-  pages: Page[];
+  chapterIndex: number;
+  chapters: Chapter[];
   excalidraws: {
     [id: string]: Excalidraw;
   };
@@ -47,7 +47,7 @@ export type Action = {
 };
 
 export type PrivateAction = {
-  type: "CHANGE_PAGE";
+  type: "CHANGE_CHAPTER";
   index: number;
 };
 
@@ -62,12 +62,12 @@ const transitions: Transitions<
   LOADING_PROJECT: {
     "PROJECT:LOAD_SUCCESS": (
       state,
-      { excalidraws, pages, commitSha }
+      { excalidraws, chapters, commitSha }
     ): Transition => ({
       ...state,
       state: "READY",
       excalidraws,
-      pages,
+      chapters,
       commitSha,
     }),
   },
@@ -87,18 +87,18 @@ export const FeatureProvider = ({
   children,
   repoUrl,
   branch,
-  page,
+  chapter,
   initialState = {
     state: "LOADING_PROJECT",
-    pages: [],
+    chapters: [],
     excalidraws: {},
-    pageIndex: page,
+    chapterIndex: chapter,
     menu: { state: "IDLE" },
   },
 }: {
   children: React.ReactNode;
   branch: string;
-  page: number;
+  chapter: number;
   repoUrl: string;
   initialState?: State;
 }) => {
@@ -115,10 +115,10 @@ export const FeatureProvider = ({
 
   useEffect(() => {
     dispatch({
-      type: "CHANGE_PAGE",
-      index: Number(page),
+      type: "CHANGE_CHAPTER",
+      index: Number(chapter),
     });
-  }, [page]);
+  }, [chapter]);
 
   useStateEffect(state, "LOADING_PROJECT", () => {
     project.load(repoUrl, branch);

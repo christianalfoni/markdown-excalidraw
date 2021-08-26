@@ -1,8 +1,8 @@
 import { StateTransition } from "react-states";
-import { Excalidraw, GitChange, Page } from "../../environments/project";
+import { Excalidraw, GitChange, Chapter } from "../../environments/project";
 import { Position } from "../../components/Editor";
 
-export type { Excalidraw, Page };
+export type { Excalidraw, Chapter };
 
 export type ModeState =
   | {
@@ -27,17 +27,26 @@ export type MenuState =
       state: "GIT";
     };
 
+export type VersionState =
+  | {
+      state: "UP_TO_DATE";
+    }
+  | {
+      state: "BEHIND";
+    };
+
 export type CaretPosition = Position;
 
 type BaseState = {
-  pageIndex: number;
-  pages: Page[];
+  chapterIndex: number;
+  chapters: Chapter[];
   excalidraws: {
     [id: string]: Excalidraw;
   };
   mode: ModeState;
   menu: MenuState;
   caretPosition: CaretPosition;
+  version: VersionState;
 };
 
 export type State = BaseState &
@@ -55,19 +64,24 @@ export type State = BaseState &
         commitSha: string;
         changes: GitChange[];
       }
+    | {
+        state: "UPDATING";
+        commitSha: string;
+        changes: GitChange[];
+      }
   );
 
 export type Command =
   | {
       cmd: "UPDATE_PAGE";
-      pageIndex: number;
+      chapterIndex: number;
       content: string;
     }
   | {
       cmd: "INSERT_EXCALIDRAW";
       content: string;
       id: string;
-      pageIndex: number;
+      chapterIndex: number;
     }
   | {
       cmd: "UPDATE_EXCALIDRAW";
@@ -75,8 +89,8 @@ export type Command =
       excalidraw: Excalidraw;
     }
   | {
-      cmd: "ADD_PAGE";
-      pageIndex: number;
+      cmd: "ADD_CHAPTER";
+      chapterIndex: number;
     };
 
 export type Action =
@@ -104,10 +118,13 @@ export type Action =
       type: "TOGGLE_GIT";
     }
   | {
-      type: "ADD_PAGE";
+      type: "ADD_CHAPTER";
     }
   | {
       type: "SAVE";
+    }
+  | {
+      type: "UPDATE";
     };
 
 export type PrivateAction =
@@ -115,7 +132,7 @@ export type PrivateAction =
       type: "INSERT_EXCALIDRAW";
     }
   | {
-      type: "CHANGE_PAGE";
+      type: "CHANGE_CHAPTER";
       index: number;
     };
 

@@ -7,7 +7,7 @@ export type {
   State as WriteBookState,
   Action as WriteBookAction,
   CaretPosition,
-  Page,
+  Chapter,
   Excalidraw,
   MenuState,
   ModeState,

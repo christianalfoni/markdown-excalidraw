@@ -39,7 +39,7 @@ export const GitChanges = ({
   book,
   send,
 }: {
-  book: PickState<WriteBookState, "READY" | "SAVING">;
+  book: PickState<WriteBookState, "READY" | "SAVING" | "UPDATING">;
   send: Dispatch<WriteBookAction>;
 }) => {
   return (
@@ -68,18 +68,48 @@ export const GitChanges = ({
           });
         }}
         disabled={match(book, {
-          READY: () => false,
+          READY: () => !book.changes.length,
           SAVING: () => true,
+          UPDATING: () => true,
         })}
         className={classNames(
           match(book, {
-            READY: () => "bg-gray-800 text-gray-300 hover:bg-gray-700",
+            READY: () =>
+              book.changes.length
+                ? "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                : "text-gray-600",
             SAVING: () => "text-gray-600",
+            UPDATING: () => "text-gray-600",
           }),
           "w-full p-2 rounded-md mt-2 text-sm"
         )}
       >
         Save
+      </button>
+      <button
+        onClick={() => {
+          send({
+            type: "UPDATE",
+          });
+        }}
+        disabled={match(book.version, {
+          UP_TO_DATE: () => true,
+          BEHIND: () => false,
+        })}
+        className={classNames(
+          match(book, {
+            READY: () =>
+              match(book.version, {
+                UP_TO_DATE: () => "text-gray-600",
+                BEHIND: () => "bg-gray-800 text-gray-300 hover:bg-gray-700",
+              }),
+            SAVING: () => "text-gray-600",
+            UPDATING: () => "text-gray-600",
+          }),
+          "w-full p-2 rounded-md mt-2 text-sm"
+        )}
+      >
+        Update
       </button>
     </div>
   );
