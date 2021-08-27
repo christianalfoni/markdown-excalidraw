@@ -180,20 +180,16 @@ function getAbsolutePosition(
   return newChar + char;
 }
 
-function getDrawLine(current: number, lineCount: number, line: number) {
-  if (line === current + lineCount - 1) {
-    return current + 1;
+function getDrawLine(currentDrawLine: number, lineCount: number, line: number) {
+  if (line < currentDrawLine) {
+    return Math.max(0, line);
   }
 
-  if (line === current && current > 0) {
-    return current - 1;
-  }
-
-  if (line < current || line > lineCount) {
+  if (line > currentDrawLine + lineCount - 1) {
     return Math.max(0, line - lineCount + 1);
   }
 
-  return current;
+  return currentDrawLine;
 }
 
 const transitions: Transitions<State, Action, Command> = {
@@ -337,17 +333,18 @@ const transitions: Transitions<State, Action, Command> = {
         line,
       });
       const position = getPositionByAbsolute(state.lines, char);
+      const drawFromLine = getDrawLine(
+        state.drawFromLine,
+        state.lineCount,
+        position.line
+      );
 
       return [
         {
           ...state,
           position,
           lastPositioning: Date.now(),
-          drawFromLine: getDrawLine(
-            state.drawFromLine,
-            state.lineCount,
-            position.line
-          ),
+          drawFromLine,
         },
         {
           cmd: "CHANGE_POSITION",
@@ -514,7 +511,7 @@ const transitions: Transitions<State, Action, Command> = {
 
       if (Date.now() - state.lastPositioning < DOUBLE_DEBOUNCE) {
         char = getAbsolutePosition(state.lines, {
-          line: state.lines.length - 1,
+          line: state.drawFromLine + state.lineCount,
           char: 0,
         });
       } else {
@@ -546,8 +543,7 @@ const transitions: Transitions<State, Action, Command> = {
           ),
         },
         {
-          cmd: "UPDATE",
-          content: state.content,
+          cmd: "CHANGE_POSITION",
           position,
           lines: state.lines,
         },
@@ -559,7 +555,7 @@ const transitions: Transitions<State, Action, Command> = {
 
       if (Date.now() - state.lastPositioning < DOUBLE_DEBOUNCE) {
         char = getAbsolutePosition(state.lines, {
-          line: 0,
+          line: state.drawFromLine,
           char: 0,
         });
       } else {
@@ -595,8 +591,7 @@ const transitions: Transitions<State, Action, Command> = {
           ),
         },
         {
-          cmd: "UPDATE",
-          content: state.content,
+          cmd: "CHANGE_POSITION",
           position,
           lines: state.lines,
         },
@@ -675,6 +670,7 @@ export default function Editor({
 
       if (!event.metaKey && key.length === 1) {
         event.preventDefault();
+
         dispatch({
           type: "CHAR_INSERT",
           key: key,

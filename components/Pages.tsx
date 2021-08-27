@@ -351,7 +351,7 @@ export const Pages = ({
       <div className="book">
         <div
           className={`${
-            index === 0 ? "bg-gray-700" : "bg-gray-50"
+            index === 0 ? "bg-gray-600" : "bg-gray-50"
           } book__page book__page--1  rounded-md border-gray-700 border`}
         >
           {index === 0 ? (

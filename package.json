@@ -23,7 +23,7 @@
     "next-pwa": "^5.2.24",
     "react": "17.0.2",
     "react-dom": "17.0.2",
-    "react-states": "^7.4.1-next",
+    "react-states": "^7.4.2-next",
     "react-syntax-highlighter": "^15.4.4"
   },
   "devDependencies": {
