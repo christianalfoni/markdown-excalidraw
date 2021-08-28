@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
-export const usePageState = () => {
+export const usePageState = (initialPage: number = 0) => {
   const [pageState, setPageState] = useState({
-    index: 0,
-    firstPageIndex: 0,
+    index: initialPage,
+    firstPageIndex: initialPage,
     flip: 0,
   });
 

@@ -1,7 +1,7 @@
 import Markdown, { MarkdownToJSX } from "markdown-to-jsx";
 import Image from "next/image";
 import * as pathUtil from "path";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { Excalidraw, Chapter } from "../features/writeBook";
 import { useSnippets } from "../features/snippets";
@@ -265,12 +265,10 @@ function getSplitPages(
     if (excalidrawRef) {
       const id = excalidrawRef[1];
       const excalidraw = excalidraws[id];
-      const canvas = exportToCanvas({
-        elements: excalidraw.elements,
-        appState: {
-          ...excalidraw.appState,
-          viewBackgroundColor: "transparent",
-        },
+
+      const canvas = exportToCanvas(excalidraw.elements, {
+        ...excalidraw.appState,
+        viewBackgroundColor: "transparent",
       });
 
       currentHeight += canvas.height;
@@ -328,23 +326,45 @@ function getSplitPages(
   return pages;
 }
 
+function getInitialPage(pages: string[], currentLine: number) {
+  let page = 0;
+  let line = 0;
+  for (page; page < pages.length; page++) {
+    const pageLines = pages[page].split("\n");
+
+    for (line; line < pageLines.length; line++) {
+      if (line === currentLine) {
+        return page;
+      }
+    }
+  }
+
+  return page;
+}
+
 export const Pages = ({
+  currentLine,
   chapter,
   chapters,
   excalidraws,
 }: {
+  currentLine: number;
   chapter: number;
   chapters: Chapter[];
   excalidraws: Record<string, Excalidraw>;
 }) => {
   const { excalidraw } = useEnvironment();
-  const { index, flip, next, prev } = usePageState();
-
   const pages = getSplitPages(
     chapters[chapter].content,
     excalidraws,
     excalidraw.exportToCanvas
   );
+  const initialPage = useMemo(
+    () => getInitialPage(pages, currentLine),
+    [currentLine]
+  );
+
+  const { index, flip, next, prev } = usePageState(initialPage);
 
   return (
     <div className="cover">
@@ -370,7 +390,7 @@ export const Pages = ({
                 }
               }}
             >
-              Page {index + 1}
+              Page {index}
             </span>
           )}
         </div>

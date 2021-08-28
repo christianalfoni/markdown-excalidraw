@@ -132,6 +132,7 @@ export const WriteBook = () => {
             ),
             READING: () => (
               <Pages
+                currentLine={readyState.caretPosition.line}
                 chapter={chapterIndex}
                 chapters={chapters}
                 excalidraws={excalidraws}
