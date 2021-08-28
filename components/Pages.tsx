@@ -63,19 +63,19 @@ const codeStyle = {
     color: "#d14",
   },
   "hljs-title": {
-    color: "#900",
+    color: "#34D399",
   },
   "hljs-section": {
-    color: "#900",
+    color: "#34D399",
   },
   "hljs-selector-id": {
     color: "#900",
   },
   "hljs-type": {
-    color: "#458",
+    color: "#34D399",
   },
   "hljs-class .hljs-title": {
-    color: "#458",
+    color: "#34D399",
   },
   "hljs-tag": {
     color: "#F87171",
@@ -329,11 +329,18 @@ function getSplitPages(
 function getInitialPage(pages: string[], currentLine: number) {
   let page = 0;
   let line = 0;
+
+  var c = document.createElement("canvas") as HTMLCanvasElement;
+  var ctx = c.getContext("2d")!;
+  ctx.font = "16px Inter";
+
   for (page; page < pages.length; page++) {
     const pageLines = pages[page].split("\n");
 
     for (line; line < pageLines.length; line++) {
-      if (line === currentLine) {
+      const width = Math.ceil(ctx.measureText(pageLines[line]).width);
+
+      if (line + Math.ceil(width / 500) - 1 >= currentLine) {
         return page;
       }
     }
