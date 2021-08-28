@@ -6,12 +6,14 @@ import {
   useStateEffect,
   useStates,
 } from "react-states";
+import { useEnvironment } from "../../environments";
+import { measureTextWidth } from "../../utils";
 
 import { useCanvas } from "./useCanvas";
 
 const LINE_HEIGHT = 30;
 const PADDING = 10;
-const LINE_LENGTH = 75;
+const LINE_LENGTH = 500;
 const FONT_SIZE = 16;
 const DOUBLE_DEBOUNCE = 175;
 
@@ -85,39 +87,6 @@ type Action =
 
 type Transition = StateTransition<State, Command>;
 
-/*
-const changePosition = (
-  state: State,
-  {
-    line,
-    lines,
-    char,
-  }: {
-    lines: string[];
-    line: number;
-    char: number;
-  }
-): Transition => {
-  return [
-    {
-      ...state,
-      line,
-      lines,
-      char,
-      lastPositioning: Date.now(),
-    },
-    {
-      cmd: "CHANGE_POSITION",
-      char,
-      line,
-      lines,
-      prevLine: state.line,
-      prevLines: state.lines,
-    },
-  ];
-};
-*/
-
 function getLines(text: string) {
   return text
     .split("\n")
@@ -128,7 +97,7 @@ function getLines(text: string) {
 
       for (var i = 1; i < words.length; i++) {
         var word = words[i];
-        var width = (currentLine + " " + word).length;
+        var width = measureTextWidth(currentLine + " " + word);
         if (width < LINE_LENGTH) {
           currentLine += " " + word;
         } else {
@@ -660,7 +629,6 @@ export default function Editor({
         state.lines,
         getPositionByAbsolute(state.lines, state.position.absolute)
       );
-      // drawCaret(caret.line, caret.char, state.lines[caret.line]);
     }
   }, [ctx]);
 

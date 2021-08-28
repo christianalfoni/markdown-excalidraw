@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 
 export const usePageState = (initialPage: number = 0) => {
+  console.log(initialPage);
   const [pageState, setPageState] = useState({
     index: initialPage,
-    firstPageIndex: initialPage,
+    firstPageIndex: initialPage % 2 === 0 ? initialPage : initialPage + 1,
     flip: 0,
   });
 

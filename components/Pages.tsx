@@ -10,6 +10,7 @@ import { excalidrawsContext } from "./ExcalidrawsProvider";
 import { Sandpack } from "@codesandbox/sandpack-react";
 import { useEnvironment } from "../environments";
 import { useSandboxes } from "../features/sandboxes";
+import { measureTextWidth } from "../utils";
 
 const codeStyle = {
   hljs: {
@@ -253,10 +254,6 @@ function getSplitPages(
   let currentHeight = 0;
   let currentPage = "";
 
-  var c = document.createElement("canvas") as HTMLCanvasElement;
-  var ctx = c.getContext("2d")!;
-  ctx.font = "16px Inter";
-
   for (let line = 0; line < lines.length; line++) {
     let text = lines[line];
 
@@ -287,11 +284,11 @@ function getSplitPages(
     }
 
     if (text.startsWith("# ")) {
-      currentHeight += 36;
+      currentHeight += 52;
     } else if (text.startsWith("## ")) {
-      currentHeight += 32;
+      currentHeight += 44;
     } else if (text.startsWith("### ")) {
-      currentHeight += 28;
+      currentHeight += 36;
     } else if (text.startsWith("```")) {
       text += "\n";
       currentHeight += 60; // margin + padding
@@ -304,7 +301,7 @@ function getSplitPages(
         }
       }
     } else {
-      const width = Math.ceil(ctx.measureText(text).width);
+      const width = measureTextWidth(text);
       const textLines = Math.max(1, Math.ceil(width / 500));
       const height = textLines * 24;
 
@@ -330,19 +327,17 @@ function getInitialPage(pages: string[], currentLine: number) {
   let page = 0;
   let line = 0;
 
-  var c = document.createElement("canvas") as HTMLCanvasElement;
-  var ctx = c.getContext("2d")!;
-  ctx.font = "16px Inter";
-
   for (page; page < pages.length; page++) {
     const pageLines = pages[page].split("\n");
 
-    for (line; line < pageLines.length; line++) {
-      const width = Math.ceil(ctx.measureText(pageLines[line]).width);
+    for (let pageLine = 0; pageLine < pageLines.length; pageLine++) {
+      const width = measureTextWidth(pageLines[pageLine]);
 
       if (line + Math.ceil(width / 500) - 1 >= currentLine) {
         return page;
       }
+
+      line++;
     }
   }
 
