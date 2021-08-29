@@ -587,7 +587,7 @@ export default function Editor({
   onChange: (value: string) => void;
   onCaretChange: (position: Position) => void;
 }) {
-  const [canvas, ctx] = useCanvas(LINE_LENGTH, height);
+  const [canvas, ctx] = useCanvas(700, height);
   const [lines] = useState(() => getLines(value));
   const lineCount = Math.floor(height / LINE_HEIGHT);
   const [state, dispatch] = useStates(transitions, {
@@ -601,7 +601,7 @@ export default function Editor({
   });
 
   function drawLines(lines: string[], position: Position) {
-    ctx.clearRect(0, 0, LINE_LENGTH, height);
+    ctx.clearRect(0, 0, 700, height);
 
     for (let line = state.drawFromLine; line < lines.length; line++) {
       const text = lines[line];

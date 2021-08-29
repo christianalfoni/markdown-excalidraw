@@ -19,8 +19,8 @@ const codeStyle = {
     marginTop: "1em",
     marginBottom: "1em",
     padding: "1rem",
-    color: "#F3F4F6",
-    background: "#374151",
+    color: "#374151",
+    background: "#F3F4F6",
     fontSize: "14px",
   },
   "hljs-comment": {
@@ -129,7 +129,7 @@ const options: MarkdownToJSX.Options = {
   overrides: {
     h1({ children }) {
       return (
-        <h1 className="text-3xl font-medium text-gray-700 px-6 my-4">
+        <h1 className="text-3xl font-medium text-gray-700 px-6 my-4 text-center">
           {children}
         </h1>
       );
@@ -301,11 +301,18 @@ function getSplitPages(
         }
       }
     } else {
-      const width = measureTextWidth(text);
-      const textLines = Math.max(1, Math.ceil(width / 500));
-      const height = textLines * 24;
+      const words = text.split(" ");
+      let currentLine = words[0];
+      for (var i = 1; i < words.length; i++) {
+        const word = words[i];
+        const width = measureTextWidth(currentLine + " " + word);
 
-      currentHeight += height;
+        if (width < 500) {
+          currentLine += " " + word;
+        } else {
+          currentHeight += 24;
+        }
+      }
     }
 
     if (currentHeight >= 700) {
