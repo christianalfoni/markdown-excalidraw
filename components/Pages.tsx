@@ -319,21 +319,21 @@ function getSplitPages(
           break;
         }
       }
-      addText(text + "\n", height);
+      addText(text, height);
       continue;
     }
 
     const words = text.split(" ");
-    let currentLine = words[0];
+    let currentLine = "";
     let height = 24;
-    for (var i = 1; i < words.length; i++) {
+    for (var i = 0; i < words.length; i++) {
       const word = words[i];
-      const width = measureTextWidth(currentLine + " " + word);
+      const width = measureTextWidth(i === 0 ? word : currentLine + " " + word);
 
       if (width < 500) {
         currentLine += " " + word;
       } else {
-        height += 24;
+        height += 20;
         currentLine = word;
       }
     }
@@ -353,13 +353,15 @@ function getInitialPage(pages: string[], currentLine: number) {
   for (page; page < pages.length; page++) {
     const pageLines = pages[page].split("\n");
 
-    for (let pageLine = 0; pageLine < pageLines.length; pageLine++) {
+    // Not quite sure why we get an added linebreak at the end, fixed by
+    // not taking last line into account
+    for (let pageLine = 0; pageLine < pageLines.length - 1; pageLine++) {
       const words = pageLines[pageLine].split(" ");
-      let lineText = words[0];
+      let lineText = "";
 
-      for (var i = 1; i < words.length; i++) {
+      for (var i = 0; i < words.length; i++) {
         const word = words[i];
-        const width = measureTextWidth(lineText + " " + word);
+        const width = measureTextWidth(i === 0 ? word : lineText + " " + word);
 
         if (width < 500) {
           lineText += " " + word;
@@ -368,7 +370,8 @@ function getInitialPage(pages: string[], currentLine: number) {
           lineText = word;
         }
 
-        if (line > currentLine + 1) {
+        if (line >= currentLine) {
+          console.log(line, lineText);
           return page;
         }
       }
@@ -376,7 +379,7 @@ function getInitialPage(pages: string[], currentLine: number) {
       line++;
     }
 
-    if (line > currentLine + 1) {
+    if (line >= currentLine) {
       return page;
     }
   }
