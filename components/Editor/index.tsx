@@ -96,8 +96,9 @@ function getLines(text: string) {
       var currentLine = words[0];
 
       for (var i = 1; i < words.length; i++) {
-        var word = words[i];
-        var width = measureTextWidth(currentLine + " " + word);
+        const word = words[i];
+        const width = measureTextWidth(currentLine + " " + word);
+
         if (width < LINE_LENGTH) {
           currentLine += " " + word;
         } else {
@@ -586,8 +587,7 @@ export default function Editor({
   onChange: (value: string) => void;
   onCaretChange: (position: Position) => void;
 }) {
-  const width = LINE_LENGTH * FONT_SIZE;
-  const [canvas, ctx] = useCanvas(width, height);
+  const [canvas, ctx] = useCanvas(LINE_LENGTH, height);
   const [lines] = useState(() => getLines(value));
   const lineCount = Math.floor(height / LINE_HEIGHT);
   const [state, dispatch] = useStates(transitions, {
@@ -601,7 +601,7 @@ export default function Editor({
   });
 
   function drawLines(lines: string[], position: Position) {
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, LINE_LENGTH, height);
 
     for (let line = state.drawFromLine; line < lines.length; line++) {
       const text = lines[line];

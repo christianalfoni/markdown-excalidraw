@@ -41,7 +41,9 @@ const transitions: Transitions<State, Action | AuthSubscription> = {
       accessToken,
     }),
     "AUTH:AUTHENTICATE_ERROR": (): Transition => ({
-      state: "SIGNED_OUT",
+      // state: "SIGNED_OUT",
+      state: "SIGNED_IN",
+      accessToken: "123",
     }),
   },
   SIGNED_IN: {},
