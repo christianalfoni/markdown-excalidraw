@@ -254,6 +254,17 @@ function getSplitPages(
   let currentHeight = 0;
   let currentPage = "";
 
+  function addText(text: string, height: number) {
+    if (currentHeight + height >= 700) {
+      pages.push(currentPage);
+      currentHeight = height;
+      currentPage = text;
+    } else {
+      currentPage += text;
+      currentHeight += height;
+    }
+  }
+
   for (let line = 0; line < lines.length; line++) {
     let text = lines[line];
 
@@ -268,8 +279,7 @@ function getSplitPages(
         viewBackgroundColor: "transparent",
       });
 
-      currentHeight += canvas.height;
-      currentPage += text + "\n";
+      addText(text + "\n", canvas.height);
       continue;
     }
 
@@ -284,45 +294,51 @@ function getSplitPages(
     }
 
     if (text.startsWith("# ")) {
-      currentHeight += 52;
-    } else if (text.startsWith("## ")) {
-      currentHeight += 44;
-    } else if (text.startsWith("### ")) {
-      currentHeight += 36;
-    } else if (text.startsWith("```")) {
+      addText(text + "\n", 52);
+      continue;
+    }
+    if (text.startsWith("## ")) {
+      addText(text + "\n", 44);
+      continue;
+    }
+    if (text.startsWith("### ")) {
+      addText(text + "\n", 36);
+
+      continue;
+    }
+
+    if (text.startsWith("```")) {
       text += "\n";
-      currentHeight += 60; // margin + padding
+      let height = 60;
+
       for (let codeLine = line + 1; codeLine < lines.length; codeLine++) {
         line++;
         text += lines[codeLine] + "\n";
-        currentHeight += 21;
+        height += 21;
         if (lines[codeLine] === "```") {
           break;
         }
       }
-    } else {
-      const words = text.split(" ");
-      let currentLine = words[0];
-      for (var i = 1; i < words.length; i++) {
-        const word = words[i];
-        const width = measureTextWidth(currentLine + " " + word);
-
-        if (width < 500) {
-          currentLine += " " + word;
-        } else {
-          currentHeight += 24;
-        }
-      }
-    }
-
-    if (currentHeight >= 700) {
-      pages.push(currentPage);
-      currentHeight = 0;
-      currentPage = text + "\n";
+      addText(text + "\n", height);
       continue;
     }
 
-    currentPage += text + "\n";
+    const words = text.split(" ");
+    let currentLine = words[0];
+    let height = 24;
+    for (var i = 1; i < words.length; i++) {
+      const word = words[i];
+      const width = measureTextWidth(currentLine + " " + word);
+
+      if (width < 500) {
+        currentLine += " " + word;
+      } else {
+        height += 24;
+        currentLine = word;
+      }
+    }
+
+    addText(text + "\n", height);
   }
 
   pages.push(currentPage);
@@ -338,13 +354,30 @@ function getInitialPage(pages: string[], currentLine: number) {
     const pageLines = pages[page].split("\n");
 
     for (let pageLine = 0; pageLine < pageLines.length; pageLine++) {
-      const width = measureTextWidth(pageLines[pageLine]);
+      const words = pageLines[pageLine].split(" ");
+      let lineText = words[0];
 
-      if (line + Math.ceil(width / 500) - 1 >= currentLine) {
-        return page;
+      for (var i = 1; i < words.length; i++) {
+        const word = words[i];
+        const width = measureTextWidth(lineText + " " + word);
+
+        if (width < 500) {
+          lineText += " " + word;
+        } else {
+          line++;
+          lineText = word;
+        }
+
+        if (line > currentLine + 1) {
+          return page;
+        }
       }
 
       line++;
+    }
+
+    if (line > currentLine + 1) {
+      return page;
     }
   }
 
