@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 export const usePageState = (initialPage: number = 0) => {
   const [pageState, setPageState] = useState({
-    index: initialPage,
+    index: initialPage % 2 === 0 ? initialPage : initialPage + 1,
     firstPageIndex: initialPage % 2 === 0 ? initialPage : initialPage + 1,
     flip: 0,
   });
