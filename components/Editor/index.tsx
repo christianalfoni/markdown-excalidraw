@@ -113,6 +113,17 @@ function getLines(text: string) {
 }
 
 function getPositionByAbsolute(lines: string[], absolute: number) {
+  const length = lines.reduce(
+    (aggr, line) => aggr + line.length,
+    lines.length - 1
+  );
+
+  if (absolute < 0) {
+    absolute = length;
+  } else if (absolute > length) {
+    absolute = 0;
+  }
+
   let char = absolute;
 
   for (let x = 0; x < lines.length; x++) {
