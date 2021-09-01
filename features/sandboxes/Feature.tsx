@@ -1,10 +1,10 @@
-import { useContext } from "react";
+import { useContext, useReducer } from "react";
 import {
   createContext,
   StateTransition,
   Transitions,
   useCommandEffect,
-  useStates,
+  createReducer,
   useSubsription,
 } from "react-states";
 import { useDevtools } from "react-states/devtools";
@@ -34,7 +34,7 @@ type Transition = StateTransition<State, Command>;
 
 const featureContext = createContext<State, Action>();
 
-const transitions: Transitions<State, Action | ProjectSubscription, Command> = {
+const reducer = createReducer<State, Action | ProjectSubscription, Command>({
   IDLE: {
     "PROJECT:LOAD_SANDBOX_SUCCESS": (state, { path, sandbox }): Transition => ({
       ...state,
@@ -51,7 +51,7 @@ const transitions: Transitions<State, Action | ProjectSubscription, Command> = {
       },
     ],
   },
-};
+});
 
 export const useFeature = () => useContext(featureContext);
 
@@ -68,10 +68,10 @@ export const FeatureProvider = ({
   initialState?: State;
 }) => {
   const { project } = useEnvironment();
-  const feature = useStates(transitions, initialState);
+  const feature = useReducer(reducer, initialState);
 
   if (process.browser && process.env.NODE_ENV === "development") {
-    useDevtools("Sandboxes", feature);
+    useDevtools("", feature);
   }
 
   const [state, dispatch] = feature;

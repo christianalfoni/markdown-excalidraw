@@ -2,11 +2,11 @@ import {
   StateTransition,
   Transitions,
   useStateEffect,
-  useStates,
+  createReducer,
   useSubsription,
 } from "react-states";
 import { Excalidraw, Chapter } from "../../environments/project";
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useReducer } from "react";
 import { createContext } from "react-states";
 import { useDevtools } from "react-states/devtools";
 import { ProjectSubscription } from "../../environments/project";
@@ -55,10 +55,10 @@ export type Transition = StateTransition<State>;
 
 const featureContext = createContext<State, Action>();
 
-const transitions: Transitions<
+const reducer = createReducer<
   State,
   Action | PrivateAction | ProjectSubscription
-> = {
+>({
   LOADING_PROJECT: {
     "PROJECT:LOAD_SUCCESS": (
       state,
@@ -79,7 +79,7 @@ const transitions: Transitions<
       },
     }),
   },
-};
+});
 
 export const useFeature = () => useContext(featureContext);
 
@@ -103,7 +103,7 @@ export const FeatureProvider = ({
   initialState?: State;
 }) => {
   const { project } = useEnvironment();
-  const feature = useStates(transitions, initialState);
+  const feature = useReducer(reducer, initialState);
 
   if (process.browser && process.env.NODE_ENV === "development") {
     useDevtools("Project", feature);

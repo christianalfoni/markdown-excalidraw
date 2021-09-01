@@ -1,10 +1,10 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useReducer } from "react";
 import {
   createContext,
   Transitions,
   useCommandEffect,
   useStateEffect,
-  useStates,
+  createReducer,
   useSubsription,
 } from "react-states";
 import { useDevtools } from "react-states/devtools";
@@ -15,11 +15,11 @@ import { PrivateAction, Action, Transition, State, Command } from "./types";
 
 const featureContext = createContext<State, Action>();
 
-const transitions: Transitions<
+const reducer = createReducer<
   State,
   Action | PrivateAction | ProjectSubscription,
   Command
-> = {
+>({
   LOADING_PROJECT: {
     "PROJECT:LOAD_SUCCESS": (
       state,
@@ -183,7 +183,7 @@ const transitions: Transitions<
       },
     }),
   },
-};
+});
 
 export const useFeature = () => useContext(featureContext);
 
@@ -218,7 +218,7 @@ export const FeatureProvider = ({
   initialState?: State;
 }) => {
   const { project } = useEnvironment();
-  const feature = useStates(transitions, initialState);
+  const feature = useReducer(reducer, initialState);
 
   if (process.browser && process.env.NODE_ENV === "development") {
     useDevtools("Project", feature);

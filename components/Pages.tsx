@@ -203,8 +203,15 @@ const options: MarkdownToJSX.Options = {
         ...excalidrawData.appState,
         viewBackgroundColor: "transparent",
       });
+
       return (
-        <div className="w-full flex justify-center">
+        <div
+          className="w-full flex justify-center my-2 relative mx-auto"
+          style={{
+            width: canvas.width + "px",
+            height: canvas.height + "px",
+          }}
+        >
           <Image
             src={canvas.toDataURL()}
             width={canvas.width}
@@ -279,7 +286,7 @@ function getSplitPages(
         viewBackgroundColor: "transparent",
       });
 
-      addText(text + "\n", canvas.height);
+      addText(text + "\n", canvas.height + 16);
       continue;
     }
 
@@ -325,7 +332,8 @@ function getSplitPages(
 
     const words = text.split(" ");
     let currentLine = "";
-    let height = 24;
+    // Do not set height on new lines as margins take care of that
+    let height = text.length ? 40 : 0; // Height + margin
     for (var i = 0; i < words.length; i++) {
       const word = words[i];
       const width = measureTextWidth(i === 0 ? word : currentLine + " " + word);
@@ -371,7 +379,6 @@ function getInitialPage(pages: string[], currentLine: number) {
         }
 
         if (line >= currentLine) {
-          console.log(line, lineText);
           return page;
         }
       }

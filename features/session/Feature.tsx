@@ -1,10 +1,10 @@
-import { useContext } from "react";
+import { useContext, useReducer } from "react";
 import {
   createContext,
   StateTransition,
   Transitions,
   useStateEffect,
-  useStates,
+  createReducer,
   useSubsription,
 } from "react-states";
 import { useDevtools } from "react-states/devtools";
@@ -34,7 +34,7 @@ type Transition = StateTransition<State>;
 
 const featureContext = createContext<State, Action>();
 
-const transitions: Transitions<State, Action | AuthSubscription> = {
+const reducer = createReducer<State, Action | AuthSubscription>({
   AUTHENTICATING: {
     "AUTH:AUTHENTICATE_SUCCESS": (_, { accessToken }): Transition => ({
       state: "SIGNED_IN",
@@ -61,7 +61,7 @@ const transitions: Transitions<State, Action | AuthSubscription> = {
       state: "SIGNED_OUT",
     }),
   },
-};
+});
 
 export const useFeature = () => useContext(featureContext);
 
@@ -75,7 +75,7 @@ export const FeatureProvider = ({
   initialState?: State;
 }) => {
   const { auth } = useEnvironment();
-  const feature = useStates(transitions, initialState);
+  const feature = useReducer(reducer, initialState);
 
   if (process.browser && process.env.NODE_ENV === "development") {
     useDevtools("Session", feature);

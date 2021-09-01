@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import {
   StateTransition,
   Transitions,
   useCommandEffect,
   useStateEffect,
-  useStates,
+  createReducer,
 } from "react-states";
 import { useEnvironment } from "../../environments";
 import { measureTextWidth } from "../../utils";
@@ -173,7 +173,7 @@ function getDrawLine(currentDrawLine: number, lineCount: number, line: number) {
   return currentDrawLine;
 }
 
-const transitions: Transitions<State, Action, Command> = {
+const reducer = createReducer<State, Action, Command>({
   IDLE: {
     CHAR_INSERT: (state, { key }): Transition => {
       const content =
@@ -579,7 +579,7 @@ const transitions: Transitions<State, Action, Command> = {
       ];
     },
   },
-};
+});
 
 export default function Editor({
   value = "",
@@ -601,7 +601,7 @@ export default function Editor({
   const [canvas, ctx] = useCanvas(700, height);
   const [lines] = useState(() => getLines(value));
   const lineCount = Math.floor(height / LINE_HEIGHT);
-  const [state, dispatch] = useStates(transitions, {
+  const [state, dispatch] = useReducer(reducer, {
     state: "IDLE",
     content: value,
     lines,
