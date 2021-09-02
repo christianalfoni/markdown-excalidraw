@@ -258,13 +258,14 @@ function getSplitPages(
 ) {
   const pages: string[] = [];
   const lines = content.split("\n");
-  let currentHeight = 0;
+  let currentHeight = 16;
   let currentPage = "";
 
   function addText(text: string, height: number) {
-    if (currentHeight + height >= 700) {
+    console.log(text, height, currentHeight);
+    if (currentHeight + height >= 652) {
       pages.push(currentPage);
-      currentHeight = height;
+      currentHeight = height + 16;
       currentPage = text;
     } else {
       currentPage += text;
