@@ -341,7 +341,7 @@ function getSplitPages(
       if (width < 500) {
         currentLine += " " + word;
       } else {
-        height += 20;
+        height += 24;
         currentLine = word;
       }
     }
