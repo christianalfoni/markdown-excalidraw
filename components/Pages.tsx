@@ -378,7 +378,7 @@ function getInitialPage(pages: string[], currentLine: number) {
           lineText = word;
         }
 
-        if (line >= currentLine) {
+        if (line > currentLine) {
           return page;
         }
       }
@@ -386,7 +386,7 @@ function getInitialPage(pages: string[], currentLine: number) {
       line++;
     }
 
-    if (line >= currentLine) {
+    if (line > currentLine) {
       return page;
     }
   }
