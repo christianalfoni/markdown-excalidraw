@@ -262,7 +262,6 @@ function getSplitPages(
   let currentPage = "";
 
   function addText(text: string, height: number) {
-    console.log(text, height, currentHeight);
     if (currentHeight + height >= 652) {
       pages.push(currentPage);
       currentHeight = height + 16;
@@ -362,24 +361,22 @@ function getInitialPage(pages: string[], currentLine: number) {
   for (page; page < pages.length; page++) {
     const pageLines = pages[page].split("\n");
 
-    // Not quite sure why we get an added linebreak at the end, fixed by
-    // not taking last line into account
     for (let pageLine = 0; pageLine < pageLines.length - 1; pageLine++) {
       const words = pageLines[pageLine].split(" ");
       let lineText = "";
 
       for (var i = 0; i < words.length; i++) {
         const word = words[i];
-        const width = measureTextWidth(i === 0 ? word : lineText + " " + word);
+        const width = measureTextWidth(lineText ? lineText + " " + word : word);
 
         if (width < 500) {
-          lineText += " " + word;
+          lineText += lineText ? " " + word : word;
         } else {
           line++;
           lineText = word;
         }
 
-        if (line > currentLine) {
+        if (line === currentLine) {
           return page;
         }
       }
@@ -387,8 +384,8 @@ function getInitialPage(pages: string[], currentLine: number) {
       line++;
     }
 
-    if (line > currentLine) {
-      return page;
+    if (line === currentLine) {
+      return page + 1;
     }
   }
 
